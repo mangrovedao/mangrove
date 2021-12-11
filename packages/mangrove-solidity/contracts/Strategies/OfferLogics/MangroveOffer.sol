@@ -71,7 +71,7 @@ abstract contract MangroveOffer is
     onlyAdmin
     returns (bool success)
   {
-    recipient.call{value: amount}("");
+    (success,) = recipient.call{value: amount}("");
   }
 
   /// trader needs to approve Mangrove to let it perform outbound token transfer at the end of the `makerExecute` function

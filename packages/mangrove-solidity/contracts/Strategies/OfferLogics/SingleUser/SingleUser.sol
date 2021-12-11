@@ -44,9 +44,9 @@ abstract contract SingleUser is MangroveOffer {
     external
     virtual
     onlyAdmin
-    returns (bool noRevert)
+    returns (bool)
   {
-    _withdrawFromMangrove(receiver, amount);
+    return _withdrawFromMangrove(receiver, amount);
   }
 
   // Posting a new offer on the (`outbound_tkn,inbound_tkn`) Offer List of Mangrove.
@@ -107,10 +107,10 @@ abstract contract SingleUser is MangroveOffer {
     uint offerId,
     bool deprovision // if set to `true`, `this` contract will receive the remaining provision (in WEI) associated to `offerId`.
   ) external virtual internalOrAdmin returns (uint) {
-    _retractOffer(outbound_tkn, inbound_tkn, offerId, deprovision);
+    return _retractOffer(outbound_tkn, inbound_tkn, offerId, deprovision);
   }
 
-  function __put__(uint amount, MgvLib.SingleOrder calldata)
+  function __put__(uint /*amount*/, MgvLib.SingleOrder calldata)
     internal
     virtual
     override

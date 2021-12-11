@@ -46,7 +46,7 @@ abstract contract MultiUser is MangroveOffer {
     returns (
       uint nextId,
       uint[] memory offerIds,
-      address[] memory offerOwners
+      address[] memory __offerOwners
     )
   {
     (
@@ -55,9 +55,9 @@ abstract contract MultiUser is MangroveOffer {
       ,
 
     ) = reader.offerList(outbound_tkn, inbound_tkn, fromId, maxOffers);
-    offerOwners = new address[](offerIds.length);
+    __offerOwners = new address[](offerIds.length);
     for (uint i = 0; i < offerIds.length; i++) {
-      offerOwners[i] = ownerOf(outbound_tkn, inbound_tkn, offerIds[i]);
+      __offerOwners[i] = ownerOf(outbound_tkn, inbound_tkn, offerIds[i]);
     }
   }
 
@@ -206,7 +206,6 @@ abstract contract MultiUser is MangroveOffer {
       address(this) == msg.sender || owner == msg.sender,
       "mgvOffer/MultiOwner/unauthorized"
     );
-    uint weiBalanceBefore = MGV.balanceOf(address(this));
     if (msg.value > 0) {
       MGV.fund{value: msg.value}();
     }
