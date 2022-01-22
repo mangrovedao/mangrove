@@ -15,8 +15,8 @@ let mgv = await Mangrove.connect({ signer: wallet });
 let market = await mgv.market({ base: "DAI", quote: "USDC" });
 
 // check its live
-market.consoleAsks();
-market.consoleBids();
+//market.consoleAsks();
+//market.consoleBids();
 
 // create a simple LP on `market`
 let directLP = await mgv.liquidityProvider(market);
@@ -49,4 +49,7 @@ prov = await onchainLP.computeAskProvision();
 tx = await onchainLP.fundMangrove(prov);
 await tx.wait();
 
+onchainLP.market.subscribe((event, utils) => {
+  console.log(event.type);
+});
 const { id: ofrId_ } = await onchainLP.newAsk({ wants: 1005, gives: 1004 });
