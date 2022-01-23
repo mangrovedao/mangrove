@@ -209,7 +209,9 @@ class LiquidityProvider {
       this.#normalizeOfferParams(p);
     const { outbound_tkn, inbound_tkn } = this.market.getOutboundInbound(p.ba);
     const pivot = await this.market.getPivotId(p.ba, price);
-    const resp = await this.#proxy().contract.newOffer(
+    const unsignedTx = await this.#proxy().contract.populateTransaction[
+      "newOffer"
+    ](
       outbound_tkn.address,
       inbound_tkn.address,
       inbound_tkn.toUnits(wants),
@@ -219,15 +221,18 @@ class LiquidityProvider {
       pivot ?? 0,
       overrides
     );
+    const txHash = await this.mgv._signer.signTransaction(unsignedTx);
 
-    return this.market.once(
+    const ret = this.market.once(
       (cbArg, _event, ethersEvent) => ({
         id: cbArg.offer.id,
         event: ethersEvent,
         pivot: pivot,
       }),
-      (_cbArg, _event, ethersEvent) => resp.hash === ethersEvent.transactionHash
+      (_cbArg, _event, ethersEvent) => txHash === ethersEvent.transactionHash
     );
+    await this.mgv._provider.sendTransaction(txHash);
+    return ret;
   }
 
   /** Update an existing ask */
