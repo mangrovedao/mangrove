@@ -272,6 +272,12 @@ class LiquidityProvider {
         `No offer in ${p} with id ${id} owned by this maker contract.`
       );
     }
+    const txHashDeferred = new Deferred<string>();
+    const res = this.market.once(
+      (_cbArg, _event, ethersEvent) => ({ event: ethersEvent }),
+      async (_cbArg, _event, ethersEvent) =>
+        (await txHashDeferred.promise) === ethersEvent.transactionHash
+    );
 
     const { wants, gives, price, gasreq, gasprice } =
       this.#normalizeOfferParams(p);
@@ -288,11 +294,8 @@ class LiquidityProvider {
       id,
       overrides
     );
-
-    return this.market.once(
-      (_cbArg, _event, ethersEvent) => ({ event: ethersEvent }),
-      (_cbArg, _event, ethersEvent) => resp.hash === ethersEvent.transactionHash
-    );
+    txHashDeferred.resolve(resp.hash);
+    return res;
   }
 
   /** Cancel an ask. If deprovision is true, will return the offer's provision to the maker balance at Mangrove. */
@@ -320,6 +323,19 @@ class LiquidityProvider {
     deprovision = false,
     overrides: ethers.Overrides = {}
   ): Promise<void> {
+    const txHashDeferred = new Deferred<string>();
+    const res = this.market.once(
+      (/*cbArg, event, ethersEvent*/) => {
+        /*empty*/
+      },
+      async (_cbArg, _event, ethersEvent) => {
+        const b =
+          (await txHashDeferred.promise) === ethersEvent.transactionHash;
+        console.log(b);
+        return b;
+      }
+    );
+    console.log("here");
     const { outbound_tkn, inbound_tkn } = this.market.getOutboundInbound(ba);
     const resp = await this.#proxy().contract.retractOffer(
       outbound_tkn.address,
@@ -328,13 +344,8 @@ class LiquidityProvider {
       deprovision,
       overrides
     );
-
-    return this.market.once(
-      (/*cbArg, event, ethersEvent*/) => {
-        /*empty*/
-      },
-      (_cbArg, _event, ethersEvent) => resp.hash === ethersEvent.transactionHash
-    );
+    txHashDeferred.resolve(resp.hash);
+    return res;
   }
   /** Get the current balance the liquidity provider has in Mangrove */
   balanceOnMangrove(overrides: ethers.Overrides = {}): Promise<Big> {
