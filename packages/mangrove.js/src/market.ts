@@ -90,14 +90,14 @@ namespace Market {
     ethersLog?: ethers.providers.Log
   ) => T;
   export type StorableMarketCallback = MarketCallback<any>;
-  export type MarketFilter = MarketCallback<boolean>;
+  export type MarketFilter = MarketCallback<boolean | Promise<boolean>>;
   export type SubscriptionParam =
     | { type: "multiple" }
     | {
         type: "once";
         ok: (...a: any[]) => any;
         ko: (...a: any[]) => any;
-        filter?: (...a: any[]) => boolean;
+        filter?: (...a: any[]) => boolean | Promise<boolean>;
       };
 
   // FIXME: This name is misleading, since you're only getting prefixes of the offer lists.
@@ -209,24 +209,37 @@ class Market {
     this.#updateBook("bids");
   }
 
-  #semibookCallback({
+  async #semibookCallback({
     cbArg,
     event,
-    ethersLog: ethersLog,
-  }: SemibookEvent): void {
+    ethersLog,
+  }: SemibookEvent): Promise<void> {
     this.#updateBook(cbArg.ba);
     for (const [cb, params] of this.#subscriptions) {
-      if (params.type === "once") {
-        if (!("filter" in params) || params.filter(cbArg, event, ethersLog)) {
-          this.#subscriptions.delete(cb);
-          Promise.resolve(cb(cbArg, event, ethersLog)).then(
-            params.ok,
-            params.ko
-          );
-        }
+      this.#invokeCallback(cb, params, { cbArg, event, ethersLog });
+    }
+  }
+
+  async #invokeCallback(
+    cb: Market.StorableMarketCallback,
+    params: Market.SubscriptionParam,
+    { cbArg, event, ethersLog }: SemibookEvent
+  ): Promise<void> {
+    if (params.type === "once") {
+      let isFilterSatisfied: boolean;
+      if (!("filter" in params)) {
+        isFilterSatisfied = true;
       } else {
-        cb(cbArg, event, ethersLog);
+        const filterResult = params.filter(cbArg, event, ethersLog);
+        isFilterSatisfied =
+          typeof filterResult === "boolean" ? filterResult : await filterResult;
       }
+      if (isFilterSatisfied) {
+        this.#subscriptions.delete(cb);
+        Promise.resolve(cb(cbArg, event, ethersLog)).then(params.ok, params.ko);
+      }
+    } else {
+      cb(cbArg, event, ethersLog);
     }
   }
 

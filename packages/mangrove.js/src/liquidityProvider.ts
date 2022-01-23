@@ -14,6 +14,7 @@ for more on big.js vs decimals.js vs. bignumber.js (which is *not* ethers's BigN
 */
 import Big from "big.js";
 import { OfferLogic } from ".";
+import { Deferred } from "./util";
 Big.DP = 20; // precision when dividing
 Big.RM = Big.roundHalfUp; // round to nearest
 
@@ -209,6 +210,19 @@ class LiquidityProvider {
       this.#normalizeOfferParams(p);
     const { outbound_tkn, inbound_tkn } = this.market.getOutboundInbound(p.ba);
     const pivot = await this.market.getPivotId(p.ba, price);
+
+    const txHashDeferred = new Deferred<string>();
+
+    const res = this.market.once(
+      (cbArg, _event, ethersEvent) => ({
+        id: cbArg.offer.id,
+        event: ethersEvent,
+        pivot: pivot,
+      }),
+      async (_cbArg, _event, ethersEvent) =>
+        (await txHashDeferred.promise) === ethersEvent.transactionHash
+    );
+
     const resp = await this.#proxy().contract.newOffer(
       outbound_tkn.address,
       inbound_tkn.address,
@@ -219,15 +233,9 @@ class LiquidityProvider {
       pivot ?? 0,
       overrides
     );
+    txHashDeferred.resolve(resp.hash);
 
-    return this.market.once(
-      (cbArg, _event, ethersEvent) => ({
-        id: cbArg.offer.id,
-        event: ethersEvent,
-        pivot: pivot,
-      }),
-      (_cbArg, _event, ethersEvent) => resp.hash === ethersEvent.transactionHash
-    );
+    return res;
   }
 
   /** Update an existing ask */
