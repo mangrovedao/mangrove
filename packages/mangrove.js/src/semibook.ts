@@ -18,6 +18,7 @@ namespace Semibook {
   };
 
   export type EventListener = (e: Event) => void;
+  // block listeners are called after all events have been called
   export type BlockListener = (n: number) => void;
 
   /**
