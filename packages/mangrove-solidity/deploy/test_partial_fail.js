@@ -71,7 +71,9 @@ module.exports = async (hre) => {
 
   console.log(`Minting ${TOKEN_A} for maker{1,2}`);
   await tokenA.mint(maker1.address, big(10));
+  await maker1.approveMgv(tokenA.address, big(100));
   await tokenA.mint(maker2.address, big(10));
+  await maker2.approveMgv(tokenA.address, big(100));
 
   console.log("Giving native tokens to maker{1,2}");
   await signer.sendTransaction({
