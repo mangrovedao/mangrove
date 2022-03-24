@@ -29,8 +29,8 @@ async function deployStrat(strategy, mgv) {
       makerContract = makerContract.connect(testSigner);
       market = [cwEth.address, cDai.address];
       break;
-    case "SimpleAaveRetail":
-    case "AdvancedAaveRetail":
+    case "SimpleAaveV2Retail":
+    case "AdvancedAaveV2Retail":
       makerContract = await Strat.deploy(aave.address, mgv.address);
       makerContract = makerContract.connect(testSigner);
       market = [wEth.address, dai.address];
@@ -164,8 +164,8 @@ describe("Deploy strategies", function () {
     await execTraderStrat(makerContract, mgv, reader, "compound");
   });
 
-  it("Lender/borrower strat on aave", async function () {
-    const makerContract = await deployStrat("AdvancedAaveRetail", mgv);
+  it("Lender/borrower strat on aave-v2", async function () {
+    const makerContract = await deployStrat("AdvancedAaveV2Retail", mgv);
     await execTraderStrat(makerContract, mgv, reader, "aave");
     // lc.stopListeners([mgv]);
   });

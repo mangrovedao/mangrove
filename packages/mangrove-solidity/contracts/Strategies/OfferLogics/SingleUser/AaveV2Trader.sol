@@ -12,9 +12,9 @@
 
 pragma solidity ^0.8.10;
 pragma abicoder v2;
-import "./AaveLender.sol";
+import "./AaveV2Lender.sol";
 
-abstract contract AaveTrader is AaveLender {
+abstract contract AaveV2Trader is AaveV2Lender {
   uint public immutable interestRateMode;
 
   constructor(uint _interestRateMode) {

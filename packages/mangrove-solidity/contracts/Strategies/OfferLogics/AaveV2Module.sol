@@ -21,7 +21,7 @@ import "../interfaces/IEIP20.sol";
 
 //import "hardhat/console.sol";
 
-contract AaveModule is Exponential {
+contract AaveV2Module is Exponential {
   event ErrorOnRedeem(
     address indexed outbound_tkn,
     address indexed inbound_tkn,

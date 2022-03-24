@@ -13,14 +13,14 @@ pragma solidity ^0.8.10;
 pragma abicoder v2;
 
 import "../../Defensive.sol";
-import "../../AaveLender.sol";
+import "../../AaveV2Lender.sol";
 
-contract PriceFed is Defensive, AaveLender {
+contract PriceFed is Defensive, AaveV2Lender {
   constructor(
     address _oracle,
     address _addressesProvider,
     address payable _MGV
-  ) Defensive(_oracle) AaveModule(_addressesProvider, 0) MangroveOffer(_MGV) {
+  ) Defensive(_oracle) AaveV2Module(_addressesProvider, 0) MangroveOffer(_MGV) {
     setGasreq(800_000);
   }
 
@@ -69,18 +69,18 @@ contract PriceFed is Defensive, AaveLender {
   // get/put and lender strat's functions
   function __get__(uint amount, ML.SingleOrder calldata order)
     internal
-    override(SingleUser, AaveLender)
+    override(SingleUser, AaveV2Lender)
     returns (uint)
   {
-    return AaveLender.__get__(amount, order);
+    return AaveV2Lender.__get__(amount, order);
   }
 
   function __put__(uint amount, ML.SingleOrder calldata order)
     internal
-    override(SingleUser, AaveLender)
+    override(SingleUser, AaveV2Lender)
     returns (uint)
   {
-    return AaveLender.__put__(amount, order);
+    return AaveV2Lender.__put__(amount, order);
   }
 
   // lastlook is defensive strat's function

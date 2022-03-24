@@ -12,58 +12,52 @@
 
 pragma solidity ^0.8.10;
 pragma abicoder v2;
-import "./MultiUser.sol";
-import "../AaveModule.sol";
+import "./SingleUser.sol";
+import "../AaveV2Module.sol";
 
-abstract contract MultiUserAaveLender is MultiUser, AaveModule {
+abstract contract AaveV2Lender is SingleUser, AaveV2Module {
   /**************************************************************************/
   ///@notice Required functions to let `this` contract interact with Aave
   /**************************************************************************/
 
-  // tokens are fetched on Aave (on behalf of offer owner)
+  ///@notice exits markets
+  function exitMarket(IEIP20 underlying) external onlyAdmin {
+    _exitMarket(underlying);
+  }
+
+  function enterMarkets(IEIP20[] calldata underlyings) external onlyAdmin {
+    _enterMarkets(underlyings);
+  }
+
+  function mint(
+    uint amount,
+    address token,
+    address onBehalf
+  ) external onlyAdmin {
+    _mint(amount, token, onBehalf);
+  }
+
   function __get__(uint amount, ML.SingleOrder calldata order)
     internal
     virtual
     override
     returns (uint)
   {
-    address owner = ownerOf(
-      order.outbound_tkn,
-      order.inbound_tkn,
-      order.offerId
-    );
     (
       uint redeemable, /*maxBorrowAfterRedeem*/
 
-    ) = maxGettableUnderlying(order.outbound_tkn, false, owner);
+    ) = maxGettableUnderlying(order.outbound_tkn, false, address(this));
     if (amount > redeemable) {
       return amount; // give up if amount is not redeemable (anti flashloan manipulation of AAVE)
     }
-    // need to retreive overlyings from msg.sender (we suppose `this` is approved for that)
-    IEIP20 aToken = overlying(IEIP20(order.outbound_tkn));
-    try aToken.transferFrom(owner, address(this), amount) returns (
-      bool success
-    ) {
-      if (success) {
-        // amount overlying was transfered from `owner`'s wallet
-        // anything wrong beyond this point should revert
-        // trying to redeem from AAVE
-        require(aaveRedeem(amount, address(this), order) == 0); // throwing to cancel overlying transfer
-        return 0;
-      }
-    } catch {
-      // nothing to be done
+
+    if (aaveRedeem(amount, address(this), order) == 0) {
+      // amount was transfered to `this`
+      return 0;
     }
-    emit LogIncident(
-      order.outbound_tkn,
-      order.inbound_tkn,
-      order.offerId,
-      "aaveLender/overlyingTransferFail"
-    );
-    return amount; // nothing was fetched
+    return amount;
   }
 
-  // received inbound token are put on Aave on behalf of offer owner
   function __put__(uint amount, ML.SingleOrder calldata order)
     internal
     virtual
@@ -74,12 +68,6 @@ abstract contract MultiUserAaveLender is MultiUser, AaveModule {
     if (amount == 0) {
       return 0;
     }
-    address owner = ownerOf(
-      order.outbound_tkn,
-      order.inbound_tkn,
-      order.offerId
-    );
-    // minted Atokens are sent to owner
-    return aaveMint(amount, owner, order);
+    return aaveMint(amount, address(this), order);
   }
 }
