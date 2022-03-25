@@ -16,8 +16,8 @@ async function deployStrat(mgv, reader, players) {
 
   const wEth = await lc.getContract("WETH");
 
-  const aave = await lc.getContract("AAVE");
-  const lendingPool = await lc.getContract("AAVEPOOL");
+  const aave = await lc.getContract("AAVE", true);
+  const lendingPool = await lc.getContract("AAVEPOOL", true);
   const Strat = (await ethers.getContractFactory("OfferProxy")).connect(
     players.deployer.signer
   );

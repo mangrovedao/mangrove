@@ -5,8 +5,8 @@ const lc = require("lib/libcommon.js");
 const chalk = require("chalk");
 
 async function execPriceFedStrat(makerContract, mgv, reader, lenderName) {
-  const dai = await lc.getContract("DAI");
-  const wEth = await lc.getContract("WETH");
+  const dai = await lc.getContract("DAI", true);
+  const wEth = await lc.getContract("WETH", true);
 
   //putting DAI on lender for contract
   await lc.fund([["DAI", "1000.0", makerContract.address]]);
@@ -31,7 +31,8 @@ async function execPriceFedStrat(makerContract, mgv, reader, lenderName) {
     makerContract,
     lenderName,
     ["DAI", "WETH"],
-    makerContract.address
+    makerContract.address,
+    true // use V2 if any
   );
 
   // // posting new offer on Mangrove via the MakerContract `post` method
@@ -44,7 +45,8 @@ async function execPriceFedStrat(makerContract, mgv, reader, lenderName) {
     "DAI", //base
     "WETH", //quote
     lc.parseToken("0.2", await lc.getDecimals("WETH")), // required WETH
-    lc.parseToken("1000.0", await lc.getDecimals("DAI")) // promised DAI
+    lc.parseToken("1000.0", await lc.getDecimals("DAI")), // promised DAI
+    true
   );
   const filter_slippage = makerContract.filters.Slippage();
   makerContract.once(filter_slippage, (id, old_wants, new_wants, event) => {
@@ -75,7 +77,8 @@ async function execPriceFedStrat(makerContract, mgv, reader, lenderName) {
     "WETH", // maker quote
     offerId,
     lc.parseToken("1000.0", await lc.getDecimals("DAI")), // taker wants 1000 DAI
-    lc.parseToken("0.2", await lc.getDecimals("WETH")) // but 0.2. is not market price (should be >= 0,3334)
+    lc.parseToken("0.2", await lc.getDecimals("WETH")), // but 0.2. is not market price (should be >= 0,3334)
+    true
   );
 
   // new offer should have been put on the book with the correct price (same offer ID)
@@ -86,7 +89,8 @@ async function execPriceFedStrat(makerContract, mgv, reader, lenderName) {
     "WETH", // maker quote
     offerId,
     lc.parseToken("900.0", await lc.getDecimals("DAI")),
-    lc.parseToken("0.36", await lc.getDecimals("WETH"))
+    lc.parseToken("0.36", await lc.getDecimals("WETH")),
+    true
   );
 
   lc.assertEqualBN(
@@ -99,14 +103,20 @@ async function execPriceFedStrat(makerContract, mgv, reader, lenderName) {
     makerContract,
     lenderName,
     ["DAI", "WETH"],
-    makerContract.address
+    makerContract.address,
+    true
   );
   const zero = lc.parseToken("0.0", 1);
   const hundred = lc.parseToken("100", 18);
-  await lc.expectAmountOnLender(makerContract.address, lenderName, [
-    ["DAI", hundred, zero, 4], // 100 DAI remaining
-    ["WETH", takerGave, zero, 8], // should have received takerGave WETH
-  ]);
+  await lc.expectAmountOnLender(
+    makerContract.address,
+    lenderName,
+    [
+      ["DAI", hundred, zero, 4], // 100 DAI remaining
+      ["WETH", takerGave, zero, 8], // should have received takerGave WETH
+    ],
+    true
+  );
 }
 
 describe("Deploy defensive strategies", function () {
@@ -118,8 +128,8 @@ describe("Deploy defensive strategies", function () {
   before(async function () {
     // 1. mint (1000 dai, 1000 eth, 1000 weth) for testSigner
     // 2. activates (dai,weth) market
-    const dai = await lc.getContract("DAI");
-    const wEth = await lc.getContract("WETH");
+    const dai = await lc.getContract("DAI", true);
+    const wEth = await lc.getContract("WETH", true);
     [testSigner] = await ethers.getSigners();
 
     await lc.fund([
@@ -128,7 +138,7 @@ describe("Deploy defensive strategies", function () {
     ]);
 
     [mgv, reader] = await lc.deployMangrove();
-    await lc.activateMarket(mgv, dai.address, wEth.address);
+    await lc.activateMarket(mgv, dai.address, wEth.address, true);
 
     const SimpleOracle = await ethers.getContractFactory("SimpleOracle");
     const usdc = await lc.getContract("USDC"); // oracle base currency
@@ -139,7 +149,7 @@ describe("Deploy defensive strategies", function () {
 
   it("Price fed strat", async function () {
     const Strat = await ethers.getContractFactory("PriceFed");
-    const aave = await lc.getContract("AAVE");
+    const aave = await lc.getContract("AAVE", true);
     const makerContract = await Strat.deploy(
       oracle.address,
       aave.address,

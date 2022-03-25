@@ -4,14 +4,14 @@ const { assert } = require("chai");
 const provider = ethers.provider;
 const chalk = require("chalk");
 const zero = ethers.BigNumber.from(0);
-async function fund(funding_tuples) {
+
+async function fund(funding_tuples, useV2) {
   async function mintNative(recipient, amount) {
     await network.provider.send("hardhat_setBalance", [
       recipient,
       ethers.utils.hexValue(amount), // not amount.toHexString() which would be zero padded!
     ]);
   }
-
   async function mintPolygonChildErc(contract, recipient, amount) {
     let chainMgr = env.mainnet.childChainManager;
     let amount_bytes = ethers.utils.hexZeroPad(amount, 32);
@@ -32,7 +32,6 @@ async function fund(funding_tuples) {
       params: [chainMgr],
     });
   }
-
   for (const tuple of funding_tuples) {
     let token_symbol = tuple[0];
     let amount = tuple[1];
@@ -41,7 +40,7 @@ async function fund(funding_tuples) {
 
     switch (token_symbol) {
       case "DAI": {
-        let dai = await getContract("DAI");
+        let dai = await getContract("DAI", useV2);
         amount = parseToken(amount, 18);
         if (env.mainnet.name == "ethereum") {
           let daiAdmin = env.mainnet.tokens.dai.admin;
@@ -70,7 +69,7 @@ async function fund(funding_tuples) {
         }
       }
       case "USDC": {
-        let usdc = await getContract("USDC");
+        let usdc = await getContract("USDC", useV2);
         amount = parseToken(amount, await getDecimals("USDC"));
         if (env.mainnet.name == "ethereum") {
           let masterMinter = env.mainnet.tokens.usdc.masterMinter;
@@ -105,7 +104,7 @@ async function fund(funding_tuples) {
         }
       }
       case "WETH": {
-        let wEth = await getContract("WETH");
+        let wEth = await getContract("WETH", useV2);
         amount = parseToken(amount, await getDecimals("WETH"));
 
         if (env.mainnet.name == "ethereum") {
@@ -167,13 +166,16 @@ function getUnderlyingSymbol(symbol) {
       console.warn(`${symbol} is not a recognized overlying symbol`);
   }
 }
-async function getContract(symbol) {
+async function getContract(symbol, useV2) {
   let net = env.mainnet;
+  let version = useV2 ? "V2" : "contract";
   switch (symbol) {
     case "DAI":
       return net.tokens.dai.contract;
     case "USDC":
       return net.tokens.usdc.contract;
+    case "WETH":
+      return net.tokens.wEth.contract;
     case "CDAI":
       return net.tokens.cDai.contract;
     case "WETH":
@@ -183,10 +185,12 @@ async function getContract(symbol) {
     case "CUSDC":
       return net.tokens.cUsdc.contract;
     case "ADAI":
+    case "AUSDC":
     case "AWETH": {
       const underlying = await getContract(getUnderlyingSymbol(symbol));
+      const lendingPool = net.aave.lendingPool[version];
       const aTokenAddress = (
-        await net.aave.lendingPool.getReserveData(underlying.address)
+        await lendingPool.getReserveData(underlying.address)
       ).aTokenAddress;
       const aToken = new ethers.Contract(
         aTokenAddress,
@@ -195,32 +199,34 @@ async function getContract(symbol) {
       );
       return aToken;
     }
-    case "WETH":
-      return net.tokens.wEth.contract;
     case "AAVE":
-      return net.aave.addressesProvider;
+      return net.aave.addressesProvider.contract;
+    case "AAVE-V2":
+      return net.aave.addressesProvider.V2;
     case "AAVEPOOL":
-      return net.aave.lendingPool;
+      return net.aave.lendingPool.contract;
+    case "AAVEPOOL":
+      return net.aave.lendingPool.V2;
     case "COMP":
       return net.compound.contract;
     case "vdWETH":
     case "vdDAI": {
-      const underlying = await getContract(getUnderlyingSymbol(symbol));
-      const reserveData = await net.aave.lendingPool.getReserveData(
+      const underlying = await getContract(getUnderlyingSymbol(symbol), useV2);
+      const reserveData = await net.aave.lendingPool[version].getReserveData(
         underlying.address
       );
       const variableDebtTokenAddress = reserveData.variableDebtTokenAddress;
       const VariableDebtToken = new ethers.Contract(
         variableDebtTokenAddress,
-        net.abis.variableDebtToken,
+        net.aave.abis.variableDebtToken,
         ethers.provider
       );
       return VariableDebtToken;
     }
     case "sdWETH":
     case "sdDAI":
-      const underlying = await getContract(getUnderlyingSymbol(symbol));
-      const reserveData = await net.aave.lendingPool.getReserveData(
+      const underlying = await getContract(getUnderlyingSymbol(symbol), useV2);
+      const reserveData = await net.aave.lendingPool[version].getReserveData(
         underlying.address
       );
       const stableDebtTokenAddress = reserveData.stableDebtTokenAddress;
@@ -321,21 +327,21 @@ function assertAlmost(bignum_expected, bignum_obs, decimals, precision, msg) {
   );
 }
 
-async function logLenderStatus(contract, lenderName, tokens, account) {
+async function logLenderStatus(contract, lenderName, tokens, account, useV2) {
   async function getAaveBorrowBalance(symbol) {
-    const pool = env.mainnet.aave.lendingPool;
-    const token = await getContract(symbol);
+    const pool = await getContract("AAVEPOOL", useV2);
+    const token = await getContract(symbol, useV2);
     const reserveData = await pool.getReserveData(token.address);
     const stableDebtTokenAddress = reserveData.stableDebtTokenAddress;
     const variableDebtTokenAddress = reserveData.variableDebtTokenAddress;
     const stableDebt = new ethers.Contract(
       stableDebtTokenAddress,
-      env.mainnet.abis.stableDebtToken,
+      env.mainnet.aave.abis.stableDebtToken,
       ethers.provider
     );
     const variableDebt = new ethers.Contract(
       variableDebtTokenAddress,
-      env.mainnet.abis.variableDebtToken,
+      env.mainnet.aave.abis.variableDebtToken,
       ethers.provider
     );
     const sbalance = await stableDebt.balanceOf(account);
@@ -359,7 +365,7 @@ async function logLenderStatus(contract, lenderName, tokens, account) {
   let baseUnit;
   let borrowPower;
   let compound = await getContract("COMP");
-  let pool = env.mainnet.aave.lendingPool;
+  let pool = await getContract("AAVEPOOL", useV2);
 
   if (lenderName == "compound") {
     baseUnit = "USD";
@@ -380,7 +386,7 @@ async function logLenderStatus(contract, lenderName, tokens, account) {
       case "compound": {
         const cToken = getCompoundToken(symbol);
         const [, , borrowBalance] = await cToken.getAccountSnapshot(account);
-        const token = await getContract(symbol);
+        const token = await getContract(symbol, useV2);
         const [redeemable] = await contract.maxGettableUnderlying(
           cToken.address,
           account
@@ -397,7 +403,7 @@ async function logLenderStatus(contract, lenderName, tokens, account) {
       }
       case "aave": {
         const decimals = await getDecimals(symbol);
-        const token = await getContract(symbol);
+        const token = await getContract(symbol, useV2);
         const [stableBorrowBalance, variableBorrowBalance] =
           await getAaveBorrowBalance(symbol, account);
         const borrowBalanceStr =
@@ -433,10 +439,11 @@ async function newOffer(
   base_sym,
   quote_sym,
   wants,
-  gives
+  gives,
+  useV2
 ) {
-  const base = await getContract(base_sym);
-  const quote = await getContract(quote_sym);
+  const base = await getContract(base_sym, useV2);
+  const quote = await getContract(quote_sym, useV2);
 
   const offerId = await nextOfferId(base.address, quote.address, mgv);
 
@@ -465,10 +472,11 @@ async function marketOrder(
   quote_sym,
   wants,
   gives,
-  failOK = false
+  failOK = false,
+  useV2
 ) {
-  const base = await getContract(base_sym);
-  const quote = await getContract(quote_sym);
+  const base = await getContract(base_sym, useV2);
+  const quote = await getContract(quote_sym, useV2);
 
   const [takerGot, takerGave, bounty] = await mgv.callStatic.marketOrder(
     base.address,
@@ -511,10 +519,11 @@ async function snipeSuccess(
   quote_sym,
   offerId,
   wants,
-  gives
+  gives,
+  useV2
 ) {
-  const base = await getContract(base_sym);
-  const quote = await getContract(quote_sym);
+  const base = await getContract(base_sym, useV2);
+  const quote = await getContract(quote_sym, useV2);
 
   const [successes, takerGot, takerGave, bounty] = await mgv.callStatic.snipes(
     base.address,
@@ -568,10 +577,11 @@ async function snipeFail(
   quote_sym,
   offerId,
   wants,
-  gives
+  gives,
+  useV2
 ) {
-  const base = await getContract(base_sym);
-  const quote = await getContract(quote_sym);
+  const base = await getContract(base_sym, useV2);
+  const quote = await getContract(quote_sym, useV2);
 
   const [successes, ,] = await mgv.callStatic.snipes(
     base.address,
@@ -633,7 +643,7 @@ async function deployMangrove() {
   return [mgv, mgvReader];
 }
 
-async function activateMarket(mgv, aTokenAddress, bTokenAddress) {
+async function activateMarket(mgv, aTokenAddress, bTokenAddress, useV2) {
   fee = 30; // setting fees to 0.03%
   density = 100; // very low to make sure tests pass
   offer_gasbase = 20000;
@@ -663,7 +673,7 @@ function formatToken(amount, decimals) {
   return ethers.utils.formatUnits(amount, decimals);
 }
 
-async function expectAmountOnLender(account, lenderName, expectations) {
+async function expectAmountOnLender(account, lenderName, expectations, useV2) {
   for (const [
     symbol_underlying,
     expected_amount,
@@ -671,7 +681,8 @@ async function expectAmountOnLender(account, lenderName, expectations) {
     precision,
   ] of expectations) {
     const overlying = await getContract(
-      getOverlyingSymbol(symbol_underlying, lenderName)
+      getOverlyingSymbol(symbol_underlying, lenderName),
+      useV2
     );
     const decimals = await getDecimals(symbol_underlying);
     let balance;
@@ -683,8 +694,14 @@ async function expectAmountOnLender(account, lenderName, expectations) {
         break;
       case "aave":
         balance = await overlying.balanceOf(account);
-        const variableDebtToken = await getContract("vd" + symbol_underlying);
-        const stableDebtToken = await getContract("sd" + symbol_underlying);
+        const variableDebtToken = await getContract(
+          "vd" + symbol_underlying,
+          useV2
+        );
+        const stableDebtToken = await getContract(
+          "sd" + symbol_underlying,
+          useV2
+        );
         const vborrow = await variableDebtToken.balanceOf(account);
         const sborrow = await stableDebtToken.balanceOf(account);
         if (vborrow.lte(sborrow)) {

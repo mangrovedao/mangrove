@@ -25,7 +25,6 @@ module.exports = (ethers) => {
     network: mainnetConfig.network,
     name: networkName,
     tokens: getConfiguredTokens(mainnetConfig, networkName, ethers),
-    abis: getExtraAbis(mainnetConfig),
   };
 
   const childChainManager = getChildChainManager(mainnetConfig);
@@ -57,20 +56,6 @@ function getChildChainManager(mainnetConfig) {
   }
 }
 
-function getExtraAbis(mainnetConfig) {
-  let abis = {};
-  if (mainnetConfig.has("extraAbis")) {
-    abis.stableDebtToken = require(mainnetConfig.get(
-      "extraAbis.stableDebtToken"
-    ));
-    abis.variableDebtToken = require(mainnetConfig.get(
-      "extraAbis.variableDebtToken"
-    ));
-    abis.aToken = require(mainnetConfig.get("extraAbis.aToken"));
-  }
-  return abis;
-}
-
 function getConfiguredTokens(mainnetConfig, networkName, ethers) {
   let tokens = {};
 
@@ -83,7 +68,7 @@ function getConfiguredTokens(mainnetConfig, networkName, ethers) {
 
   // DAI
   if (mainnetConfig.has("tokens.dai")) {
-    const daiContract = tryCreateTokenContract(
+    const [daiContract, daiContractV2] = tryCreateTokenContract(
       "DAI",
       "dai",
       mainnetConfig,
@@ -92,17 +77,22 @@ function getConfiguredTokens(mainnetConfig, networkName, ethers) {
     );
     if (daiContract) {
       tokens.dai = { contract: daiContract };
-
-      const daiConfig = mainnetConfig.get("tokens.dai");
-      if (daiConfig.has("adminAddress")) {
-        tokens.dai.admin = daiConfig.get("adminAddress"); // to mint fresh DAIs on ethereum
-      }
+    } else {
+      console.warn("No DAI configuration found");
+      return;
+    }
+    if (daiContractV2) {
+      tokens.dai.V2 = daiContractV2;
+    }
+    const daiConfig = mainnetConfig.get("tokens.dai");
+    if (daiConfig.has("adminAddress")) {
+      tokens.dai.admin = daiConfig.get("adminAddress"); // to mint fresh DAIs on ethereum
     }
   }
 
   // USDC
   if (mainnetConfig.has("tokens.usdc")) {
-    const usdcContract = tryCreateTokenContract(
+    const [usdcContract, usdcContactV2] = tryCreateTokenContract(
       "USDC",
       "usdc",
       mainnetConfig,
@@ -111,17 +101,22 @@ function getConfiguredTokens(mainnetConfig, networkName, ethers) {
     );
     if (usdcContract) {
       tokens.usdc = { contract: usdcContract };
-
-      const usdcConfig = mainnetConfig.get("tokens.usdc");
-      if (usdcConfig.has("masterMinterAddress")) {
-        tokens.usdc.masterMinter = usdcConfig.get("masterMinterAddress"); // to give mint allowance
-      }
+    } else {
+      console.warn("No USDC configuration found");
+      return;
+    }
+    if (usdcContactV2) {
+      tokens.usdc.V2 = usdcContactV2;
+    }
+    const usdcConfig = mainnetConfig.get("tokens.usdc");
+    if (usdcConfig.has("masterMinterAddress")) {
+      tokens.usdc.masterMinter = usdcConfig.get("masterMinterAddress"); // to give mint allowance
     }
   }
 
   // WETH
   if (mainnetConfig.has("tokens.wEth")) {
-    const wEthContract = tryCreateTokenContract(
+    const [wEthContract, wEthContractV2] = tryCreateTokenContract(
       "WETH",
       "wEth",
       mainnetConfig,
@@ -130,13 +125,19 @@ function getConfiguredTokens(mainnetConfig, networkName, ethers) {
     );
     if (wEthContract) {
       tokens.wEth = { contract: wEthContract };
+    } else {
+      console.warn("No WETH configuration found");
+      return;
     }
+    if (wEthContractV2) {
+      tokens.wEth.V2 = wEthContractV2;
+    } // no minter for wEth, use deposit Eth
   }
 
   // Compound tokens
   // CDAI
   if (mainnetConfig.has("tokens.cDai")) {
-    const cDaiContract = tryCreateTokenContract(
+    const [cDaiContract] = tryCreateTokenContract(
       "CDAI",
       "cDai",
       mainnetConfig,
@@ -152,7 +153,7 @@ function getConfiguredTokens(mainnetConfig, networkName, ethers) {
   }
   // CUSDC
   if (mainnetConfig.has("tokens.cUsdc")) {
-    const cUsdcContract = tryCreateTokenContract(
+    const [cUsdcContract] = tryCreateTokenContract(
       "CUSDC",
       "cUsdc",
       mainnetConfig,
@@ -169,7 +170,7 @@ function getConfiguredTokens(mainnetConfig, networkName, ethers) {
 
   // CETH
   if (mainnetConfig.has("tokens.cwEth")) {
-    const cEthContract = tryCreateTokenContract(
+    const [cEthContract] = tryCreateTokenContract(
       "CWETH",
       "cwEth",
       mainnetConfig,
@@ -183,7 +184,6 @@ function getConfiguredTokens(mainnetConfig, networkName, ethers) {
       };
     }
   }
-
   return tokens;
 }
 
@@ -195,7 +195,7 @@ function tryCreateTokenContract(
   ethers
 ) {
   if (!mainnetConfig.has(`tokens.${configName}`)) {
-    return null;
+    return [];
   }
   const tokenConfig = mainnetConfig.get(`tokens.${configName}`);
 
@@ -203,19 +203,29 @@ function tryCreateTokenContract(
     console.warn(
       `Config for ${tokenName} does not specify an address on ${networkName}. Contract therefore not available.`
     );
-    return null;
+    return [];
   }
-  const tokenAddress = tokenConfig.get("address");
+  const [tokenAddress, tokenAddressOpt] = tokenConfig.has("address")
+    ? [tokenConfig.get("address")]
+    : [tokenConfig.get("V3"), tokenConfig.get("V2")];
   if (!tokenConfig.has("abi")) {
     console.warn(
       `Config for ${tokenName} does not specify an abi file for on ${networkName}. Contract therefore not available.`
     );
-    return null;
+    return [];
   }
   const tokenAbi = require(tokenConfig.get("abi"));
 
   console.info(`$ token ${tokenName} ABI loaded. Address: ${tokenAddress}`);
-  return new ethers.Contract(tokenAddress, tokenAbi, ethers.provider);
+  const contract = new ethers.Contract(tokenAddress, tokenAbi, ethers.provider);
+  if (tokenAddressOpt) {
+    return [
+      contract,
+      new ethers.Contract(tokenAddressOpt, tokenAbi, ethers.provider),
+    ];
+  } else {
+    return [contract];
+  }
 }
 
 function tryGetCompoundEnv(mainnetConfig, networkName, ethers) {
@@ -262,10 +272,12 @@ function tryGetAaveEnv(mainnetConfig, networkName, ethers) {
 
   if (
     !(
-      aaveConfig.has("addressesProviderAddress") &&
-      aaveConfig.has("addressesProviderAbi") &&
-      aaveConfig.has("lendingPoolAddress") &&
-      aaveConfig.has("lendingPoolAbi")
+      aaveConfig.has("addressesProvider.V2") &&
+      aaveConfig.has("addressesProvider.V3") &&
+      aaveConfig.has("addressesProvider.abi") &&
+      aaveConfig.has("lendingPool.V2") &&
+      aaveConfig.has("lendingPool.V3") &&
+      aaveConfig.has("lendingPool.abi")
     )
   ) {
     console.warn(
@@ -274,30 +286,49 @@ function tryGetAaveEnv(mainnetConfig, networkName, ethers) {
     return null;
   }
 
-  const addressesProviderAddress = aaveConfig.get("addressesProviderAddress");
-  const lendingPoolAddress = aaveConfig.get("lendingPoolAddress");
-  const addressesProviderAbi = require(aaveConfig.get("addressesProviderAbi"));
-  const lendingPoolAbi = require(aaveConfig.get("lendingPoolAbi"));
+  const addressesProviderAbi = require(aaveConfig.get("addressesProvider.abi"));
+  const lendingPoolAbi = require(aaveConfig.get("lendingPool.abi"));
 
   const addressesProvider = new ethers.Contract(
-    addressesProviderAddress,
+    aaveConfig.get("addressesProvider.V3"),
+    addressesProviderAbi,
+    ethers.provider
+  );
+  const addressesProviderV2 = new ethers.Contract(
+    aaveConfig.get("addressesProvider.V2"),
     addressesProviderAbi,
     ethers.provider
   );
 
   const lendingPool = new ethers.Contract(
-    lendingPoolAddress,
+    aaveConfig.get("lendingPool.V3"),
+    lendingPoolAbi,
+    ethers.provider
+  );
+  const lendingPoolV2 = new ethers.Contract(
+    aaveConfig.get("lendingPool.V2"),
     lendingPoolAbi,
     ethers.provider
   );
 
   const aave = {
-    lendingPool: lendingPool,
-    addressesProvider: addressesProvider,
+    lendingPool: { contract: lendingPool, V2: lendingPoolV2 },
+    addressesProvider: { contract: addressesProvider, V2: addressesProviderV2 },
+    abis: {},
   };
 
+  if (aaveConfig.has("extraAbis")) {
+    aave.abis.stableDebtToken = require(aaveConfig.get(
+      "extraAbis.stableDebtToken"
+    ));
+    aave.abis.variableDebtToken = require(aaveConfig.get(
+      "extraAbis.variableDebtToken"
+    ));
+    aave.abis.aToken = require(aaveConfig.get("extraAbis.aToken"));
+  }
+
   console.info(
-    `${networkName} Aave ABI loaded. LendingPool is at: ${lendingPoolAddress}`
+    `${networkName} Aave ABI loaded. LendingPool is at: ${lendingPool.address}`
   );
   return aave;
 }

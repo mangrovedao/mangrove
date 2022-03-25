@@ -11,7 +11,7 @@ async function deployStrat(strategy, mgv) {
   const dai = (await lc.getContract("DAI")).connect(testSigner);
   const wEth = (await lc.getContract("WETH")).connect(testSigner);
   const comp = (await lc.getContract("COMP")).connect(testSigner);
-  const aave = (await lc.getContract("AAVE")).connect(testSigner); //returns addressesProvider
+  const aave = (await lc.getContract("AAVE", true)).connect(testSigner); //returns addressesProvider
   const cwEth = (await lc.getContract("CWETH")).connect(testSigner);
   const cDai = (await lc.getContract("CDAI")).connect(testSigner);
   const Strat = await ethers.getContractFactory(strategy);
