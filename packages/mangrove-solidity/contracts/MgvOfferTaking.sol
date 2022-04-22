@@ -177,7 +177,6 @@ abstract contract MgvOfferTaking is MgvHasOffers {
       * `"mgv/tradeSuccess"`: offer execution succeeded. Will appear in `OrderResult`.
       * `"mgv/notEnoughGasForMakerTrade"`: cannot give maker close enough to `gasreq`. Triggers a revert of the entire order.
       * `"mgv/makerRevert"`: execution of `makerExecute` reverted. Will appear in `OrderResult`.
-      * `"mgv/makerAbort"`: execution of `makerExecute` returned normally, but returndata did not start with 32 bytes of 0s. Will appear in `OrderResult`.
       * `"mgv/makerTransferFail"`: maker could not send outbound_tkn tokens. Will appear in `OrderResult`.
       * `"mgv/makerReceiveFail"`: maker could not receive inbound_tkn tokens. Will appear in `OrderResult`.
       * `"mgv/takerTransferFail"`: taker could not send inbound_tkn tokens. Triggers a revert of the entire order.
@@ -650,12 +649,6 @@ abstract contract MgvOfferTaking is MgvHasOffers {
 
     if (!callSuccess) {
       innerRevert([bytes32("mgv/makerRevert"), bytes32(gasused), makerData]);
-    }
-
-    /* Successful execution must have a returndata that begins with `bytes32("")`.
-     */
-    if (makerData != "") {
-      innerRevert([bytes32("mgv/makerAbort"), bytes32(gasused), makerData]);
     }
 
     bool transferSuccess = transferTokenFrom(
