@@ -157,13 +157,13 @@ contract MgvOfferMaking is MgvHasOffers {
 
   /* ## Retract Offer */
   //+clear+
-  /* `retractOffer` takes the offer `offerId` out of the book. However, `deprovision == true` also refunds the provision associated with the offer. */
+  /* `retractOffer` takes the offer `offerId` out of the book. However, `deprovision == true` also refunds the provision associated with the offer. It returns the amount credited back to the maker. */
   function retractOffer(
     address outbound_tkn,
     address inbound_tkn,
     uint offerId,
     bool deprovision
-  ) external returns (uint provision) { unchecked {
+  ) external returns (uint credited) { unchecked {
     (, P.Local.t local) = config(outbound_tkn, inbound_tkn);
     unlockedMarketOnly(local);
     P.Offer.t offer = offers[outbound_tkn][inbound_tkn][offerId];
@@ -200,12 +200,12 @@ contract MgvOfferMaking is MgvHasOffers {
 
     /* If the user wants to get their provision back, we compute its provision from the offer's `gasprice`, `offer_gasbase` and `gasreq`. */
     if (deprovision) {
-      provision =
+      credited =
         10**9 *
         offerDetail.gasprice() * //gasprice is 0 if offer was deprovisioned
         (offerDetail.gasreq() + offerDetail.offer_gasbase());
       // credit `balanceOf` and log transfer
-      creditWei(msg.sender, provision);
+      creditWei(msg.sender, credited);
     }
     emit OfferRetract(outbound_tkn, inbound_tkn, offerId);
   }}
