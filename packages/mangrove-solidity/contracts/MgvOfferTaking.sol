@@ -775,17 +775,13 @@ abstract contract MgvOfferTaking is MgvHasOffers {
    * Otherwise, the maker loses the cost of `gasused + offer_gasbase` gas. The gas price is estimated by `gasprice`.
    * To create the offer, the maker had to provision for `gasreq + offer_gasbase` gas at a price of `offerDetail.gasprice`.
    * We do not consider the tx.gasprice.
-   * `offerDetail.gasbase` and `offerDetail.gasprice` are the values of the Mangrove parameters `config.offer_gasbase` and `config.gasprice` when the offer was created. Without caching those values, the provision set aside could end up insufficient to reimburse the maker (or to retribute the taker).
+   * We use the Mangrove's current gasbase/gasprice values to compute the penalty to subtract from the failed offer's provision.
    */
   function applyPenalty(
     ML.SingleOrder memory sor,
     uint gasused
   ) internal returns (uint) { unchecked {
     uint gasreq = sor.offerDetail.gasreq();
-
-    uint provision = 10**9 *
-      sor.offerDetail.gasprice() * 
-      (gasreq + sor.offerDetail.offer_gasbase());
 
     /* We set `gasused = min(gasused,gasreq)` since `gasreq < gasused` is possible e.g. with `gasreq = 0` (all calls consume nonzero gas). */
     if (gasused > gasreq) {
@@ -798,12 +794,12 @@ abstract contract MgvOfferTaking is MgvHasOffers {
       (gasused +
         sor.local.offer_gasbase());
 
-    if (penalty > provision) {
-      penalty = provision;
+    if (penalty > sor.offerDetail.provision()) {
+      penalty = sor.offerDetail.provision();
     }
 
     /* Here we write to storage the new maker balance. This occurs _after_ possible reentrant calls. How do we know we're not crediting twice the same amounts? Because the `offer`'s provision was set to 0 in storage (through `dirtyDeleteOffer`) before the reentrant calls. In this function, we are working with cached copies of the offer as it was before it was consumed. */
-    creditWei(sor.offerDetail.maker(), provision - penalty);
+    creditWei(sor.offerDetail.maker(), sor.offerDetail.provision() - penalty);
 
     return penalty;
   }}

@@ -156,10 +156,7 @@ abstract contract MangroveOffer is AccessControlled, IOfferLogic {
     }
     uint bounty = (gasreq + localData.offer_gasbase()) * _gp * 10**9; // in WEI
     // if `offerId` is not in the OfferList, all returned values will be 0
-    uint currentProvisionLocked = (offerDetailData.gasreq() +
-      offerDetailData.offer_gasbase()) *
-      offerDetailData.gasprice() *
-      10**9;
+    uint currentProvisionLocked = offerDetailData.provision();
     uint currentProvision = currentProvisionLocked + balance;
     return (currentProvision >= bounty ? 0 : bounty - currentProvision);
   }

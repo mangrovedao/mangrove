@@ -198,13 +198,9 @@ contract MgvOfferMaking is MgvHasOffers {
       deprovision
     );
 
-    /* If the user wants to get their provision back, we compute its provision from the offer's `gasprice`, `offer_gasbase` and `gasreq`. */
+    /* Give the user their provision back if their want it. */
     if (deprovision) {
-      credited =
-        10**9 *
-        offerDetail.gasprice() * //gasprice is 0 if offer was deprovisioned
-        (offerDetail.gasreq() + offerDetail.offer_gasbase());
-      // credit `balanceOf` and log transfer
+      credited = offerDetail.provision();
       creditWei(msg.sender, credited);
     }
     emit OfferRetract(outbound_tkn, inbound_tkn, offerId);
@@ -246,7 +242,7 @@ contract MgvOfferMaking is MgvHasOffers {
   /* ## Write Offer */
 
   function writeOffer(OfferPack memory ofp, bool update) internal { unchecked {
-    /* `gasprice`'s floor is Mangrove's own gasprice estimate, `ofp.global.gasprice`. We first check that gasprice fits in 16 bits. Otherwise it could be that `uint16(gasprice) < global_gasprice < gasprice`, and the actual value we store is `uint16(gasprice)`. */
+    /* `gasprice`'s floor is Mangrove's own gasprice estimate, `ofp.global.gasprice`. */
     require(
       checkGasprice(ofp.gasprice),
       "mgv/writeOffer/gasprice/16bits"
@@ -295,39 +291,12 @@ contract MgvOfferMaking is MgvHasOffers {
     );
 
     /* We now write the new `offerDetails` and remember the previous provision (0 by default, for new offers) to balance out maker's `balanceOf`. */
-    uint oldProvision;
-    {
-      P.OfferDetail.t offerDetail = offerDetails[ofp.outbound_tkn][ofp.inbound_tkn][
-        ofp.id
-      ];
-      if (update) {
-        require(
-          msg.sender == offerDetail.maker(),
-          "mgv/updateOffer/unauthorized"
-        );
-        oldProvision =
-          10**9 *
-          offerDetail.gasprice() *
-          (offerDetail.gasreq() + offerDetail.offer_gasbase());
-      }
-
-      /* If the offer is new, has a new `gasprice`, `gasreq`, or if the Mangrove's `offer_gasbase` configuration parameter has changed, we also update `offerDetails`. */
-      if (
-        !update ||
-        offerDetail.gasreq() != ofp.gasreq ||
-        offerDetail.gasprice() != ofp.gasprice ||
-        offerDetail.offer_gasbase() !=
-        ofp.local.offer_gasbase()
-      ) {
-        uint offer_gasbase = ofp.local.offer_gasbase();
-        offerDetails[ofp.outbound_tkn][ofp.inbound_tkn][ofp.id] = 
-        P.OfferDetail.pack({
-          __maker: msg.sender,
-          __gasreq: ofp.gasreq,
-          __offer_gasbase: offer_gasbase,
-          __gasprice: ofp.gasprice
-        });
-      }
+    P.OfferDetail.t offerDetail = offerDetails[ofp.outbound_tkn][ofp.inbound_tkn][ofp.id];
+    if (update) {
+      require(
+        msg.sender == offerDetail.maker(),
+        "mgv/updateOffer/unauthorized"
+      );
     }
 
     /* With every change to an offer, a maker may deduct provisions from its `balanceOf` balance. It may also get provisions back if the updated offer requires fewer provisions than before. */
@@ -336,10 +305,23 @@ contract MgvOfferMaking is MgvHasOffers {
         ofp.local.offer_gasbase()) *
         ofp.gasprice *
         10**9;
-      if (provision > oldProvision) {
-        debitWei(msg.sender, provision - oldProvision);
-      } else if (provision < oldProvision) {
-        creditWei(msg.sender, oldProvision - provision);
+      if (provision > offerDetail.provision()) {
+        debitWei(msg.sender, provision - offerDetail.provision());
+      } else if (provision < offerDetail.provision()) {
+        creditWei(msg.sender, offerDetail.provision() - provision);
+      }
+
+      /* If the offer is new, has a new `gasprice`, `gasreq`, or if the Mangrove's `offer_gasbase` configuration parameter has changed, we also update `offerDetails`. */
+      if (
+        !update ||
+        offerDetail.gasreq() != ofp.gasreq ||
+        offerDetail.provision() != provision) {
+        offerDetails[ofp.outbound_tkn][ofp.inbound_tkn][ofp.id] = 
+        P.OfferDetail.pack({
+          __maker: msg.sender,
+          __gasreq: ofp.gasreq,
+          __provision: provision
+        });
       }
     }
     /* We now place the offer in the book at the position found by `findPosition`. */

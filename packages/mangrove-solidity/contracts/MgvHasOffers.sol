@@ -87,9 +87,9 @@ contract MgvHasOffers is MgvRoot {
   /* # Misc. low-level functions */
   /* ## Offer deletion */
 
-  /* When an offer is deleted, it is marked as such by setting `gives` to 0. Note that provision accounting in the Mangrove aims to minimize writes. Each maker `fund`s the Mangrove to increase its balance. When an offer is created/updated, we compute how much should be reserved to pay for possible penalties. That amount can always be recomputed with `offerDetail.gasprice * (offerDetail.gasreq + offerDetail.offer_gasbase)`. The balance is updated to reflect the remaining available ethers.
+  /* When an offer is deleted, it is marked as such by setting `gives` to 0. 
 
-     Now, when an offer is deleted, the offer can stay provisioned, or be `deprovision`ed. In the latter case, we set `gasprice` to 0, which induces a provision of 0. All code calling `dirtyDeleteOffer` with `deprovision` set to `true` must be careful to correctly account for where that provision is going (back to the maker's `balanceOf`, or sent to a taker as compensation). */
+     When an offer is deleted, the offer can stay provisioned, or be `deprovision`ed. In the latter case, we set `provision` to 0. */
   function dirtyDeleteOffer(
     address outbound_tkn,
     address inbound_tkn,
@@ -100,7 +100,7 @@ contract MgvHasOffers is MgvRoot {
   ) internal { unchecked {
     offer = offer.gives(0);
     if (deprovision) {
-      offerDetail = offerDetail.gasprice(0);
+      offerDetail = offerDetail.provision(0);
     }
     offers[outbound_tkn][inbound_tkn][offerId] = offer;
     offerDetails[outbound_tkn][inbound_tkn][offerId] = offerDetail;

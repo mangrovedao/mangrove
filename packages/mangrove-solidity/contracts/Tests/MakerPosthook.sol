@@ -592,10 +592,8 @@ contract MakerPosthook_Test is IMaker, HasMgvEvents {
     uint __gives = order.offer.gives();
     address __maker = order.offerDetail.maker();
     uint __gasreq = order.offerDetail.gasreq();
-    uint __gasprice = order.offerDetail.gasprice();
     TestEvents.eq(__wants, 1 ether, "Incorrect wants for offer in posthook");
     TestEvents.eq(__gives, 2 ether, "Incorrect gives for offer in posthook");
-    TestEvents.eq(__gasprice, 500, "Incorrect gasprice for offer in posthook");
     TestEvents.eq(__maker, address(this), "Incorrect maker address");
     TestEvents.eq(__gasreq, gasreq, "Incorrect gasreq");
   }

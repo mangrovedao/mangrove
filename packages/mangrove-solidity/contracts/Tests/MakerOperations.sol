@@ -341,7 +341,6 @@ contract MakerOperations_Test is IMaker, HasMgvEvents {
     TestEvents.eq(offer.prev, ofr0, "Invalid prev");
     TestEvents.eq(offer.next, ofr1, "Invalid next");
     TestEvents.eq(offer.gives, 0, "offer gives was not set to 0");
-    TestEvents.eq(offerDetail.gasprice, 100, "offer gasprice is incorrect");
 
     TestEvents.check(
       mgv.isLive(mgv.offers(_base, _quote, offer.prev)),
@@ -380,7 +379,6 @@ contract MakerOperations_Test is IMaker, HasMgvEvents {
     TestEvents.eq(offer.prev, 0, "Invalid prev");
     TestEvents.eq(offer.next, ofr1, "Invalid next");
     TestEvents.eq(offer.gives, 0, "offer gives was not set to 0");
-    TestEvents.eq(offerDetail.gasprice, 100, "offer gasprice is incorrect");
 
     TestEvents.check(
       mgv.isLive(mgv.offers(_base, _quote, offer.next)),
@@ -419,7 +417,6 @@ contract MakerOperations_Test is IMaker, HasMgvEvents {
     TestEvents.eq(offer.prev, ofr0, "Invalid prev");
     TestEvents.eq(offer.next, 0, "Invalid next");
     TestEvents.eq(offer.gives, 0, "offer gives was not set to 0");
-    TestEvents.eq(offerDetail.gasprice, 100, "offer gasprice is incorrect");
 
     TestEvents.check(
       mgv.isLive(mgv.offers(_base, _quote, offer.prev)),
@@ -894,9 +891,9 @@ contract MakerOperations_Test is IMaker, HasMgvEvents {
     );
     TestEvents.eq(ofr.gives, 0, "Retracted offer should have 0 gives");
     TestEvents.eq(
-      dtl.gasprice,
+      dtl.provision,
       0,
-      "Deprovisioned offer should have 0 gasprice"
+      "Deprovisioned offer should have 0 provision"
     );
     try mkr.updateOffer(1 ether + 2, 1 ether, 100_000, offerId, offerId) {
       TestEvents.fail(

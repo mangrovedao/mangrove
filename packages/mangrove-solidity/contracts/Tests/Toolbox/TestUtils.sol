@@ -239,7 +239,7 @@ library TestUtils {
     makerGives,
     nextId,
     gasreqreceive_on,
-    gasprice,
+    provision,
     gasreq
   }
 
@@ -338,7 +338,7 @@ library TestUtils {
     if (infKey == Info.gasreq) {
       return offerDetail.gasreq;
     } else {
-      return offerDetail.gasprice;
+      return offerDetail.provision;
     }
   }
 
