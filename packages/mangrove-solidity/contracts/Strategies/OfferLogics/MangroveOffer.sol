@@ -73,13 +73,13 @@ abstract contract MangroveOffer is AccessControlled, IOfferLogic {
   {
     if (!__lastLook__(order)) {
       // hook to check order details and decide whether `this` contract should renege on the offer.
-      return RENEGED;
+      revert("mgvOffer/abort/reneged");
     }
     if (__put__(order.gives, order) > 0) {
-      return PUTFAILURE;
+      revert("mgvOffer/abort/putFailed");
     }
     if (__get__(order.wants, order) > 0) {
-      return OUTOFLIQUIDITY;
+      revert("mgvOffer/abort/getFailed");
     }
   }
 
@@ -111,10 +111,10 @@ abstract contract MangroveOffer is AccessControlled, IOfferLogic {
   }
 
   /// `this` contract needs to approve Mangrove to let it perform outbound token transfer at the end of the `makerExecute` function
-  /// NB anyone can call this function
-  function approveMangrove(address outbound_tkn, uint amount) public {
+  /// NB anyone can call this function so this function only allows max uint (otherwise someone could reset it to 0)
+  function approveMangrove(address outbound_tkn) public {
     require(
-      IEIP20(outbound_tkn).approve(address(MGV), amount),
+      IEIP20(outbound_tkn).approve(address(MGV), type(uint).max),
       "mgvOffer/approve/Fail"
     );
   }
@@ -168,22 +168,6 @@ abstract contract MangroveOffer is AccessControlled, IOfferLogic {
       10**9;
     uint currentProvision = currentProvisionLocked + balance;
     return (currentProvision >= bounty ? 0 : bounty - currentProvision);
-  }
-
-  // if logic must revert during a trade execution it should use `revertInTrade` in order to pass `reason` to the posthook for loggin purpose
-  function revertInTrade(bytes32 reason) internal pure {
-    bytes memory b = new bytes(32);
-    assembly {
-      mstore(add(b, 32), reason)
-      revert(add(b, 32), 32)
-    }
-  }
-
-  // if logic must require a property during a trade execution it should use `requireInTrade` in order to pass `reason` to the posthook for loggin purpose
-  function requireInTrade(bool requirement, bytes32 reason) internal pure {
-    if (!requirement) {
-      revertInTrade(reason);
-    }
   }
 
   ////// Default Customizable hooks for Taker Order'execution

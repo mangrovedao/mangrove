@@ -384,6 +384,11 @@ class Market {
     return config.asks.active && config.bids.active;
   }
 
+  async isLive(ba: "bids" | "asks", offerId: number): Promise<boolean> {
+    const offer: Market.Offer = await this.getSemibook(ba).offerInfo(offerId);
+    return offer.gives.gt(0);
+  }
+
   /** Given a price, find the id of the immediately-better offer in the
    * book. If there is no offer with a better price, `undefined` is returned.
    */
@@ -630,7 +635,7 @@ class Market {
       data: { receipt: receipt },
     });
     for (const evt of receipt.events) {
-      if (evt.event === "OrderComplete") {
+      if (evt.event === "OrderComplete" && evt.address === this.mgv._address) {
         if ((evt as OrderCompleteEvent).args.taker === receipt.from) {
           result = evt;
         }
@@ -643,13 +648,14 @@ class Market {
     const gave_bq = orderType === "buy" ? "quote" : "base";
     const takerGot: BigNumber = result.args.takerGot;
     const takerGave: BigNumber = result.args.takerGave;
-    return {
+    const orderResult = {
       got: this[got_bq].fromUnits(takerGot),
       gave: this[gave_bq].fromUnits(takerGave),
       partialFill: fillWants ? takerGot.lt(wants) : takerGave.lt(gives),
       penalty: this.mgv.fromUnits(result.args.penalty, 18),
       txReceipt: receipt,
     };
+    return orderResult;
   }
 
   async #restingOrder(
@@ -667,7 +673,7 @@ class Market {
       params: Market.RestingOrderParams;
     },
     overrides: ethers.Overrides
-  ) {
+  ): Promise<Market.OrderResult> {
     const overrides_ = {
       ...overrides,
       value: this.mgv.toUnits(params.provision, 18),
@@ -731,7 +737,7 @@ class Market {
       gave: this[gave_bq].fromUnits(takerGave),
       partialFill: fillWants ? takerGot.lt(wants) : takerGave.lt(gives),
       penalty: this.mgv.fromUnits(result.args.penalty, 18),
-      offerId: result.args.restingOrderId,
+      offerId: result.args.restingOrderId.toNumber(),
       txReceipt: receipt,
     };
   }

@@ -63,16 +63,20 @@ class LiquidityProvider {
 
   computeOfferProvision(
     ba: "bids" | "asks",
-    opts: { id?: number; gasreq?: number }
+    opts: { id?: number; gasreq?: number } = {}
   ): Promise<Big> {
     return this.getMissingProvision(ba, opts);
   }
 
-  computeBidProvision(opts: { id?: number; gasreq?: number }): Promise<Big> {
+  computeBidProvision(
+    opts: { id?: number; gasreq?: number } = {}
+  ): Promise<Big> {
     return this.getMissingProvision("bids", opts);
   }
 
-  computeAskProvision(opts: { id?: number; gasreq?: number }): Promise<Big> {
+  computeAskProvision(
+    opts: { id?: number; gasreq?: number } = {}
+  ): Promise<Big> {
     return this.getMissingProvision("asks", opts);
   }
 
@@ -151,7 +155,6 @@ class LiquidityProvider {
     fund?: Bigish
   ): ethers.PayableOverrides {
     if (fund) {
-      console.log("funding mangrove");
       return { value: this.mgv.toUnits(fund, 18), ...overrides };
     } else {
       return overrides;
