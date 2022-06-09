@@ -21,7 +21,7 @@
     "clean-typechain": "rimraf \"src/types/typechain/*\" || exit 0",
     "rollup": "rollup -c rollup.config.ts",
     "test-with-dependencies": "yarn workspaces foreach -vpiR --topological-dev --from $npm_package_name run test",
-    "test": "cross-env NODE_ENV=test nyc --reporter=lcov mocha --config test/mocha/config/integration-tests.json",
+    "test": "cross-env NODE_ENV=test NODE_OPTIONS=\"--max-old-space-size=4096\" nyc --reporter=lcov mocha --config test/mocha/config/integration-tests.json",
     "typechain": "yarn run clean-typechain && npx typechain --target=ethers-v5 --out-dir=src/types/typechain \"src/abis/*.json\"",
     "doc": "cd src && yarn typedoc --options ../typedoc.json index.ts"
   },
