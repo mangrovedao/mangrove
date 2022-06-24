@@ -24,7 +24,7 @@ import minimist from 'minimist';
 import * as addressHandling from "./address-handling";
 
 // define relevant contracts
-const coreContracts = [ "Mangrove", "MgvCleaner", "MgvReader", "MgvOracle" ];
+const coreContracts = [ "Mangrove", "MgvCleaner", "MgvReader", "MgvOracle", "MangroveOrderEnriched" ];
 
 // read args - and do minimal sanity checking
 const stringArgs = ['deployment', 'chainkey', 'output'];
