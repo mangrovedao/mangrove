@@ -13,8 +13,8 @@
 pragma solidity ^0.8.10;
 pragma abicoder v2;
 
-import "contracts/strategies/utils/AccessControlled.sol";
-import "contracts/strategies/utils/TransferLib.sol";
+import "contracts/strats/utils/AccessControlled.sol";
+import "contracts/strats/utils/TransferLib.sol";
 import "./AbstractRouter.sol";
 
 contract SimpleRouter is AbstractRouter {

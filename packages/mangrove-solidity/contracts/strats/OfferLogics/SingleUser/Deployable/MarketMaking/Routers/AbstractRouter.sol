@@ -13,8 +13,8 @@
 pragma solidity ^0.8.10;
 pragma abicoder v2;
 
-import "contracts/strategies/interfaces/IEIP20.sol";
-import "contracts/strategies/utils/AccessControlled.sol";
+import "contracts/strats/interfaces/IEIP20.sol";
+import "contracts/strats/utils/AccessControlled.sol";
 
 abstract contract AbstractRouter is AccessControlled {
   mapping(address => bool) public makers;

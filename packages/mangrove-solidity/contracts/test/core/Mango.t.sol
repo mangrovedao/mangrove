@@ -2,8 +2,8 @@
 pragma solidity ^0.8.10;
 
 import "mgv_test/lib/MangroveTest.sol";
-import "mgv_src/strategies/OfferLogics/SingleUser/Deployable/MarketMaking/Mango/Mango.sol";
-import "mgv_src/strategies/OfferLogics/SingleUser/Deployable/MarketMaking/Routers/SimpleRouter.sol";
+import "mgv_src/strats/OfferLogics/SingleUser/Deployable/MarketMaking/Mango/Mango.sol";
+import "mgv_src/strats/OfferLogics/SingleUser/Deployable/MarketMaking/Routers/SimpleRouter.sol";
 
 contract MangoTest is MangroveTest {
   struct Book {

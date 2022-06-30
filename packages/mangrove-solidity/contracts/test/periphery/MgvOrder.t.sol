@@ -6,10 +6,10 @@ pragma solidity ^0.8.10;
 pragma abicoder v2;
 
 // import "../../AbstractMangrove.sol";
-import "mgv_src/strategies/interfaces/IEIP20.sol";
+import "mgv_src/strats/interfaces/IEIP20.sol";
 // import "contracts/Strategies/interfaces/IMangrove.sol";
 import {MgvLib as ML, P, IMaker} from "mgv_src/MgvLib.sol";
-import {IMangrove} from "mgv_src/strategies/interfaces/IMangrove.sol";
+import {IMangrove} from "mgv_src/strats/interfaces/IMangrove.sol";
 
 // import "hardhat/console.sol";
 
@@ -18,8 +18,8 @@ import {IMangrove} from "mgv_src/strategies/interfaces/IMangrove.sol";
 // import "../Agents/TestToken.sol";
 // import "../Agents/TestMaker.sol";
 
-import {MangroveOrderEnriched as MgvOrder} from "mgv_src/strategies/OrderLogics/MangroveOrderEnriched.sol";
-import "mgv_src/strategies/interfaces/IOrderLogic.sol";
+import {MangroveOrderEnriched as MgvOrder} from "mgv_src/strats/OrderLogics/MangroveOrderEnriched.sol";
+import "mgv_src/strats/interfaces/IOrderLogic.sol";
 
 contract MangroveOrder_Test is MangroveTest {
   // to check ERC20 logging
