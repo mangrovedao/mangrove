@@ -66,7 +66,7 @@
     "cross-env": "^7.0.3",
     "eslint": "^8.14.0",
     "eslint-config-prettier": "^8.5.0",
-    "hardhat": "^2.9.9",
+    "hardhat": "^2.10.1",
     "hardhat-deploy": "^0.11.10",
     "hardhat-deploy-ethers": "^0.3.0-beta.11",
     "lint-staged": "^13.0.2",

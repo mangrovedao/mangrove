@@ -38,7 +38,7 @@
     "dotenv-flow": "^3.2.0",
     "ethers": "^5.6.4",
     "fs": "^0.0.1-security",
-    "hardhat": "^2.9.9",
+    "hardhat": "^2.10.1",
     "hardhat-contract-sizer": "^2.5.1",
     "hardhat-deploy": "^0.11.10",
     "hardhat-deploy-ethers": "^0.3.0-beta.10",
