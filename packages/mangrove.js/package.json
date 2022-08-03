@@ -57,7 +57,7 @@
     "*.{js,ts,css,md,json}": "prettier --write"
   },
   "dependencies": {
-    "@ethersproject/experimental": "^5.6.1",
+    "@ethersproject/experimental": "^5.6.3",
     "@mangrovedao/commonlib.js": "workspace:*",
     "async-mutex": "^0.3.2",
     "big.js": "^6.1.1",

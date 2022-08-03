@@ -34,7 +34,7 @@
     "**/*": "prettier --write --ignore-unknown"
   },
   "dependencies": {
-    "@ethersproject/experimental": "^5.6.1",
+    "@ethersproject/experimental": "^5.6.3",
     "@mangrovedao/commonlib.js": "workspace:*",
     "@mangrovedao/mangrove.js": "workspace:*",
     "@types/big.js": "^6.1.3",
