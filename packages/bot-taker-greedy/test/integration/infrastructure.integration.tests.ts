@@ -11,7 +11,10 @@ import Mangrove from "@mangrovedao/mangrove.js";
 describe("Can connect to Mangrove on local chain", () => {
   it("should be able to connect to Mangrove", function () {
     return expect(
-      Mangrove.connect({ provider: this.test?.parent?.parent?.ctx.provider })
+      Mangrove.connect({
+        provider: this.server.url,
+        privateKey: this.accounts.tester.key,
+      })
     ).to.eventually.be.fulfilled;
   });
 });

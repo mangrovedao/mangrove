@@ -1,8 +1,8 @@
 {
-    "require": ["ts-node/register", "@mangrovedao/hardhat-utils/mocha/hooks/integration-test-root-hooks"],
-    "recursive": true,
-    "spec": "test/integration/*integration.test.ts",
-    "timeout": 60000,
-    "reporter": "mocha-multi-reporters",
-    "reporterOptions": "configFile=test/mocha/config/integration-tests-multi-reporters.json"
+  "require": ["ts-node/register", "src/util/mochaHooks.ts"],
+  "recursive": true,
+  "spec": "test/integration/*integration.test.ts",
+  "timeout": 60000,
+  "reporter": "mocha-multi-reporters",
+  "reporterOptions": "configFile=test/mocha/config/integration-tests-multi-reporters.json"
 }

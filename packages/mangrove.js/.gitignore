@@ -8,3 +8,12 @@ coverage/
 cache/
 src/types/typechain/*
 !src/types/typechain/README
+
+# foundry broadcasts to anvil
+!/broadcast
+/broadcast/*
+/broadcast/*/31337/
+
+# deploy output by deploy script
+deploy_output.txt
+state.dump

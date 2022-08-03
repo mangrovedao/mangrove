@@ -44,7 +44,6 @@ export class GasUpdater {
   #oracleURL_Key = "";
   oracleContract: typechain.MgvOracle;
 
-
   /**
    * Constructs a GasUpdater bot.
    * @param mangrove A mangrove.js Mangrove object.
@@ -74,7 +73,10 @@ export class GasUpdater {
         );
     }
     // Using the mangrove.js address functionallity, since there is no reason to recreate the significant infastructure for only one Contract.
-    const oracleAddress = Mangrove.getAddress("MgvOracle", mangrove._network.name); 
+    const oracleAddress = Mangrove.getAddress(
+      "MgvOracle",
+      mangrove._network.name
+    );
     this.oracleContract = typechain.MgvOracle__factory.connect(
       oracleAddress,
       mangrove._signer

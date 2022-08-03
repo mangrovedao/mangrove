@@ -159,6 +159,11 @@ class Semibook implements Iterable<Market.Offer> {
     this.market.mgv._provider.off("block", this.#blockEventCallback);
   }
 
+  /* Wait until all currently pending semibook operations have been completed -- not as good as explicitly waiting for a specific tx to be processed by mangrove.js, but works as a temporary solution. Note that async-mutex's waitForUnlock is not a solution here, as it releases waiters between queue items. */
+  awaitCurrentProcessing(): Promise<void> {
+    return this.#cacheLock.runExclusive(() => void 0);
+  }
+
   async requestOfferListPrefix(
     options: Semibook.Options
   ): Promise<Market.Offer[]> {

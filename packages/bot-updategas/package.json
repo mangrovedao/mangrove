@@ -17,7 +17,7 @@
     "build-this-package": "tsc && yarn run write-env-info-file",
     "heroku-build-this-package": "yarn run build-this-package",
     "build": "yarn run get-oracle-abi && yarn install && yarn run typechain && yarn workspaces foreach -vpiR --topological-dev --from $npm_package_name run build-this-package",
-    "get-oracle-abi": "cp -R node_modules/@mangrovedao/mangrove-solidity/dist/mangrove-abis/MgvOracle.json ./src/abis/",
+    "get-oracle-abi": "cp -R ../../node_modules/@mangrovedao/mangrove-solidity/dist/mangrove-abis/MgvOracle.json ./src/abis/",
     "clean-this-package": "yarn run clean-typechain && rimraf build",
     "clean": "yarn workspaces foreach -vpiR --topological-dev --from $npm_package_name run clean-this-package",
     "clean-typechain": "rimraf \"src/types/typechain/*\" || exit 0",
@@ -26,8 +26,6 @@
     "test:integration": "cross-env NODE_ENV=test NODE_OPTIONS=\"--max-old-space-size=8192\" mocha --config test/mocha/config/integration-tests.json",
     "typechain": "yarn run clean-typechain && npx typechain --target=ethers-v5 --out-dir=src/types/typechain \"src/abis/*.json\"",
     "start": "node build/index.js",
-    "local-hardhat:start-node": "hardhat node --no-deploy",
-    "local-hardhat:deploy-mangrove": "hardhat deploy --network localhost",
     "write-env-info-file": "node ./scripts/writeEnvInfoFile.js"
   },
   "lint-staged": {
@@ -53,9 +51,7 @@
   "devDependencies": {
     "@espendk/json-file-reporter": "^1.4.2",
     "@ethersproject/hardware-wallets": "^5.6.0",
-    "@mangrovedao/hardhat-utils": "workspace:*",
     "@mangrovedao/mangrove-solidity": "workspace:*",
-    "@nomiclabs/hardhat-ethers": "^2.0.6",
     "@typechain/ethers-v5": "^10.1.0",
     "@types/chai": "^4.3.1",
     "@types/chai-as-promised": "^7.1.5",
@@ -71,9 +67,6 @@
     "cross-env": "^7.0.3",
     "eslint": "^8.14.0",
     "eslint-config-prettier": "^8.5.0",
-    "hardhat": "^2.9.9",
-    "hardhat-deploy": "^0.11.10",
-    "hardhat-deploy-ethers": "^0.3.0-beta.11",
     "lint-staged": "^13.0.2",
     "mocha": "^10.0.0",
     "mocha-multi-reporters": "^1.5.1",

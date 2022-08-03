@@ -8,38 +8,49 @@ import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 import { Mangrove } from "@mangrovedao/mangrove.js";
 import { GasUpdater, OracleSourceConfiguration } from "../../src/GasUpdater";
-import * as hre from "hardhat";
-import "hardhat-deploy-ethers/dist/src/type-extensions";
 import { config } from "../../src/util/config";
-import { SignerWithAddress } from "hardhat-deploy-ethers/dist/src/signers";
+import * as typechain from "../../src/types/typechain";
+import { Signer, ethers } from "ethers";
 
 describe("GasUpdater integration tests", () => {
-  let gasUpdaterSigner: SignerWithAddress;
+  let gasUpdaterSigner: ethers.Wallet;
   let mgv: Mangrove;
+  let mgvAdmin: Mangrove;
 
   before(async function () {
-    gasUpdaterSigner = await hre.ethers.getNamedSigner("gasUpdater");
+    gasUpdaterSigner = new ethers.Wallet(this.accounts.tester.key);
+    // gasUpdaterSigner = await hre.ethers.getNamedSigner("gasUpdater");
   });
 
   beforeEach(async function () {
     mgv = await Mangrove.connect({
       //provider: this.test?.parent?.parent?.ctx.provider,
       signer: gasUpdaterSigner,
+      provider: this.server.url,
     });
 
-    const deployer = (await hre.ethers.getNamedSigners()).deployer;
-    const mgvContract = await hre.ethers.getContract("Mangrove", deployer);
-    const mgvOracleContract = await hre.ethers.getContract(
-      "MgvOracle",
-      deployer
+    const deployer = new ethers.Wallet(
+      this.accounts.deployer.key,
+      mgv._provider
     );
+    mgvAdmin = await Mangrove.connect({
+      //provider: this.test?.parent?.parent?.ctx.provider,
+      signer: deployer,
+      provider: this.server.url,
+    });
 
-    await mgvContract.setMonitor(mgvOracleContract.address);
-    await mgvContract.setUseOracle(true);
-    await mgvContract.setNotify(true);
+    // Using the mangrove.js address functionallity, since there is no reason to recreate the significant infastructure for only one Contract.
+    const oracleAddress = Mangrove.getAddress("MgvOracle", mgv._network.name);
 
-    const gasUpdater = gasUpdaterSigner.address;
-    await mgvOracleContract.setMutator(gasUpdater);
+    await mgvAdmin.contract.setMonitor(oracleAddress);
+    await mgvAdmin.contract.setUseOracle(true);
+    await mgvAdmin.contract.setNotify(true);
+
+    const oracleContract = typechain.MgvOracle__factory.connect(
+      oracleAddress,
+      mgvAdmin._signer
+    );
+    await oracleContract.setMutator(gasUpdaterSigner.address);
   });
 
   afterEach(() => {

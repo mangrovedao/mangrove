@@ -14,11 +14,12 @@ describe("MGV Token integration tests suite", () => {
   beforeEach(async function () {
     //set mgv object
     mgv = await Mangrove.connect({
-      provider: this.test?.parent?.parent?.ctx.provider,
+      provider: this.server.url,
+      privateKey: this.accounts.tester.key,
     });
 
     //shorten polling for faster tests
-    mgv._provider.pollingInterval = 250;
+    mgv._provider.pollingInterval = 10;
   });
 
   afterEach(async () => {

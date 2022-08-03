@@ -1,5 +1,5 @@
 import { BigNumber, BigNumberish, ContractTransaction, utils } from "ethers";
-import Mangrove, { MgvToken } from "../..";
+import Mangrove, { MgvToken } from "../../src";
 
 export const sleep = (ms?: number): Promise<void> => {
   return new Promise((cb) => setTimeout(cb, ms));
@@ -34,6 +34,21 @@ export const asyncQueue = <T>(): AsyncQueue<T> => {
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const toWei = (v: string | number, u = "ether"): BigNumber =>
   utils.parseUnits(v.toString(), u);
+
+export const approxEq = (
+  a: BigNumberish,
+  b: BigNumberish,
+  delta: string
+): boolean => {
+  // const aa = BigNumber.from(a);
+  // const bb = BigNumber.from(b);
+  // if (aa.lt(bb)) {
+  //   return aa.sub(bb).lte(toWei(delta));
+  // } else {
+  //   return bb.sub(aa).lte(toWei(delta));
+  // }
+  return BigNumber.from(a).sub(b).abs().lte(toWei(delta));
+};
 
 export type OfferData = {
   wants: string;

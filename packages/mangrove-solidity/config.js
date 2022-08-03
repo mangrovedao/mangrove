@@ -1,3 +1,4 @@
+// TODO: move this to a better-named file or fold it into a general config
 exports.abi_exports = [
   "Mangrove",
   "MgvReader",

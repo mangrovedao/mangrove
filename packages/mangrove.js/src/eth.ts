@@ -3,7 +3,7 @@
  * @desc These methods facilitate interactions with the Ethereum blockchain.
  */
 
-import { ethers } from "ethers";
+import { ethers, providers } from "ethers";
 import { Provider, Signer } from "./types";
 import { logger, logdataLimiter } from "./util/logger";
 import fs from "fs";
@@ -41,6 +41,36 @@ export interface ProviderNetwork {
   name: string;
 }
 
+export class Mnemonic {
+  mnemonic: string;
+  iterateOn: "account" | "change" | "index";
+  static path(iterator, iterateOn: "account" | "change" | "index"): string {
+    const params = { account: 0, change: 0, index: 0 };
+    params[iterateOn] = iterator;
+    return `m/44'/60'/${params.account}'/${params.change}/${params.index}`;
+  }
+  constructor(
+    mnemonic: string,
+    iterateOn: "account" | "change" | "index" = "index"
+  ) {
+    this.mnemonic = mnemonic;
+    this.iterateOn = iterateOn;
+  }
+
+  signer(iterator: number): ethers.Wallet {
+    const path = Mnemonic.path(iterator, this.iterateOn);
+    return ethers.Wallet.fromMnemonic(this.mnemonic, path);
+  }
+
+  address(iterator: number) {
+    return this.signer(iterator).address;
+  }
+
+  key(iterator: number) {
+    return this.signer(iterator).privateKey;
+  }
+}
+
 /**
  * This helps the mangrove.js constructor discover which Ethereum network the
  *     developer wants to use.
@@ -72,7 +102,7 @@ export async function getProviderNetwork(
   let networkName;
 
   if (networkId === 31337) {
-    networkName = "hardhat";
+    networkName = "local";
   } else {
     networkName = ethers.providers.getNetwork(networkId).name;
   }
@@ -81,6 +111,39 @@ export async function getProviderNetwork(
     id: networkId,
     name: networkName === "homestead" ? "mainnet" : networkName,
   };
+}
+
+/** Debug class */
+// providers.JsonRpcProvider.perform
+class LoggingProvider extends providers.JsonRpcProvider {
+  sendTransaction(
+    transaction: any
+  ): Promise<ethers.providers.TransactionResponse> {
+    console.log("--->>>", transaction);
+    // throw new Error("wot");
+    return super.sendTransaction(transaction);
+  }
+  perform(method: string, parameters: any): Promise<any> {
+    console.log(">>>", method, parameters);
+    if (method === "sendTransaction") {
+      for (const k of [
+        "hash",
+        "to",
+        "from",
+        "value",
+        "gasLimit",
+        "gasPrice",
+        "maxFeePerGas",
+        "maxPriorityFeePerGas",
+      ]) {
+        console.log(k, parameters[k]);
+      }
+    }
+    return super.perform(method, parameters).then((result) => {
+      console.log("<<<", method, parameters, result);
+      return result;
+    });
+  }
 }
 
 /**
@@ -144,12 +207,23 @@ export async function _createSigner(
       contextInfo: "eth.signer",
       data: { signer: options.signer },
     });
-    provider = ethers.getDefaultProvider(provider);
+    provider =
+      process.env["MGV_TEST_DEBUG"] === "true"
+        ? new LoggingProvider(provider)
+        : new providers.JsonRpcProvider(provider);
+  } else if (provider instanceof ethers.providers.JsonRpcProvider) {
+    logger.debug("Uses given provider", {
+      contextInfo: "eth.signer",
+      data: { signer: options.signer },
+    });
   } else {
     logger.debug("Uses ethers' Web3Provider created from given provider", {
       contextInfo: "eth.signer",
       data: { provider: provider },
     });
+    // note: feeding a JsonRpcProvider here will result in a broken `send` method,
+    // see https://github.com/ethers-io/ethers.js/blob/608864fc3f00390e1260048a157af00378a98e41/packages/providers/src.ts/web3-provider.ts#L152
+    // where `send(method,params)` gets used as if it was `send({method,params})`
     provider = new ethers.providers.Web3Provider(provider);
   }
 

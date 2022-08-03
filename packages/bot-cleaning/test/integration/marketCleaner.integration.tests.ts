@@ -8,7 +8,7 @@ import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 
 import { Mangrove, Market } from "@mangrovedao/mangrove.js";
-import * as mgvTestUtil from "@mangrovedao/mangrove.js/test/util/mgvIntegrationTestUtil";
+import { mgvTestUtil } from "@mangrovedao/mangrove.js";
 
 import { ethers } from "ethers";
 import { Provider } from "@ethersproject/abstract-provider";
@@ -29,9 +29,7 @@ let market: Market;
 
 describe("MarketCleaner integration tests", () => {
   before(async function () {
-    testProvider = ethers.getDefaultProvider(
-      this.test?.parent?.parent?.ctx.providerUrl
-    );
+    testProvider = ethers.getDefaultProvider(this.server.url);
   });
 
   after(async function () {
@@ -39,6 +37,13 @@ describe("MarketCleaner integration tests", () => {
   });
 
   beforeEach(async function () {
+    mgvTestUtil.setConfig(
+      await Mangrove.connect({
+        privateKey: this.accounts.deployer.key,
+        provider: this.server.url,
+      }),
+      this.accounts
+    );
     maker = await mgvTestUtil.getAccount(mgvTestUtil.AccountName.Maker);
     cleaner = await mgvTestUtil.getAccount(mgvTestUtil.AccountName.Cleaner);
 
@@ -73,6 +78,7 @@ describe("MarketCleaner integration tests", () => {
       // Arrange
       await mgvTestUtil.postNewRevertingOffer(market, ba, maker);
       await mgvTestUtil.eventsForLastTxHaveBeenGenerated;
+      await market.awaitCurrentProcessing();
 
       const marketCleaner = new MarketCleaner(market, cleanerProvider);
 

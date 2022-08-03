@@ -1,6 +1,6 @@
-hardhat/=packages/mangrove-solidity/foundry_lib/forge-std-vendored/src/
-mgv_src/=packages/mangrove-solidity/contracts/
-mgv_test/=packages/mangrove-solidity/contracts/test/
+mgv_src/=packages/mangrove-solidity/src/
+mgv_test/=packages/mangrove-solidity/test/
+mgv_script/=packages/mangrove-solidity/script/
 
-ds-test/=packages/mangrove-solidity/foundry_lib/forge-std-vendored/lib/ds-test/src/
-forge-std/=packages/mangrove-solidity/foundry_lib/forge-std-vendored/src/
+ds-test/=packages/mangrove-solidity/lib/forge-std-vendored/lib/ds-test/src/
+forge-std/=packages/mangrove-solidity/lib/forge-std-vendored/src/

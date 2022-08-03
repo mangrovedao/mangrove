@@ -270,12 +270,6 @@ Yarn 2 is configured in two places:
 A few notes on the reasons for our chosen Yarn 2 configuration:
 
 
-## `nmHoistingLimits: workspaces`
-By default, Yarn hoists dependencies to the highest possible level. However, Hardhat only allows local installs and thus does not support hoisting: https://hardhat.org/errors/#HH12 .
-
-In Yarn 1 (and Lerna) one can prevent hoisting of specific packages, but that's not possible with Yarn 2. We have therefore disabled hoisting past workspaces, i.e., dependencies are always installed in the local `node_modules` folder.
-
-
 ## `nodeLinker: node-modules`
 Yarn 2 has introduced an alternative to `node_modules` called "Plug'n'Play". While it sounds promising, it's not fully supported by the ecosystem and we have therefore opted to use the old approach using `node_modules`.
 

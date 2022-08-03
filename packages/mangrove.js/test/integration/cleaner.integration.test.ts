@@ -4,8 +4,6 @@ import * as chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 
-import "hardhat/types";
-
 import Mangrove from "../../src";
 
 import { Big } from "big.js";
@@ -14,27 +12,21 @@ Big.prototype[Symbol.for("nodejs.util.inspect.custom")] = function () {
   return `<Big>${this.toString()}`; // previously just Big.prototype.toString;
 };
 
-// Workaround for missing HRE types in hardhat-deploy
-declare module "hardhat/types/runtime" {
-  export interface HardhatRuntimeEnvironment {
-    getNamedAccounts: () => any;
-  }
-}
-
 describe("Cleaner integration tests suite", () => {
   let mgv: Mangrove;
 
   beforeEach(async function () {
     //set mgv object
     mgv = await Mangrove.connect({
-      provider: this.test?.parent?.parent?.ctx.provider,
+      provider: this.server.url,
+      privateKey: this.accounts.tester.key,
     });
 
     // Shorten polling for faster tests
     // Workaround for the fact that Ethers.js does not expose Provider.pollingInterval in its type declarations
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    mgv._provider.pollingInterval = 250;
+    mgv._provider.pollingInterval = 10;
   });
 
   afterEach(async () => {

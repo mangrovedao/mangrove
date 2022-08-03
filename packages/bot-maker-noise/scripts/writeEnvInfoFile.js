@@ -1,6 +1,6 @@
 // Write environment information to a file in the public folder
 const { writeFileSync, mkdirSync } = require("fs");
-const mangroveJsPackageJson = require("../node_modules/@mangrovedao/mangrove.js/package.json");
+const mangroveJsPackageJson = require("../../../node_modules/@mangrovedao/mangrove.js/package.json");
 
 const main = async () => {
   const mangroveJsVersion = mangroveJsPackageJson.version;

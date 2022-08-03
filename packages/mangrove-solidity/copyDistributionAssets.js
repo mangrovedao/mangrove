@@ -78,7 +78,7 @@ const match_path = (artifacts, name) => {
 const export_queue = [];
 
 // gather all artifact files
-const artifacts = all_files(path.join(cwd, "foundry_out"));
+const artifacts = all_files(path.join(cwd, "out"));
 
 // combine all configured exports in a single list
 const all_exports = config.abi_exports
@@ -87,7 +87,6 @@ const all_exports = config.abi_exports
 
 // add subset of full artifacts to export queue
 for (const { name, export_type } of all_exports) {
-  // files(process.cwd()+'/foundry_out')) {
   const match = match_path(artifacts, name);
   const artifact = read_artifact(match);
   let data;
@@ -112,7 +111,9 @@ for (const { name, match, basename, data } of export_queue) {
   written.push(basename);
   const export_file = `${distAbiDir}/${basename}`;
   if (!argv.noop) {
-    fs.writeFileSync(export_file, JSON.stringify(data, null, 2));
+    // since our git posthook seems to add trailing newlines (probably throuhg prettier),
+    // not having one here means repeatedly seeing stripped newlines in git changes
+    fs.writeFileSync(export_file, JSON.stringify(data, null, 2) + "\n");
   } else {
     console.log(`Matched ${name} with ${path.relative(cwd, match)}`);
     console.log(

@@ -235,10 +235,10 @@ mgv = await Mangrove.connect({
   privateKey: '0x_your_private_key_', // preferably with environment variable
 });
 
-// Init with a signer and a provider in e.g. hardhat:
+// Init with a signer and a provider,
 mgv = await Mangrove.connect({
   provider: 'https://mainnet.infura.io/v3/_your_project_id_',
-  signer: await hre.ethers.getSigners()[0];
+  signer: await new ethers.Wallet(...)
 });
 
 // Init with HD mnemonic (server side)
@@ -354,7 +354,7 @@ configuration](#package-configuration)).
 
 ## Tests
 
-Tests are available in `./test/integration/*.integration.test.js`. Methods are tested using an in-process local chain using [Hardhat](https://hardhat.org/). For free archive node access, get a provider URL from [Alchemy](http://alchemy.com/).
+Tests are available in `./test/integration/*.integration.test.js`. Methods are tested using a spawned [anvil](https://book.getfoundry.sh/reference/anvil/) process. For free archive node access, get a provider URL from [Alchemy](http://alchemy.com/).
 
 ```bash
 ## Run all tests
@@ -368,40 +368,7 @@ yarn test -- -g 'subscribes'
 
 Tests are based on [Mocha](https://mochajs.org/). Mocha configuration can be found in `./test/mocha/config`.
 
-The integration tests use the Root Hooks provided by `@mangrovedao/hardhat-utils` which start an in-process Hardhat chain with Mangrove deployed and add a matching `Provider` to the Mocha `Context`.
-
-### Utility test scripts
-
-Scripts to ease testing of your Mangrove.js-based dApp can be found in `./test/scripts/`.
-
-#### `obFiller.js` : Order book filler
-
-The `obFiller.js` script runs a local Hardhat chain where offers are continously added/removed.
-
-The script helpfully prints mnemonic and addresses that you can copy to MetaMask and your dApp:
-
-```shell
-$ ts-node test/scripts/obFiller.js
-Mnemonic:
-test test test test test test test test test test test junk
-
-RPC node
-http://localhost:8546
-
-User/admin
-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-
-WETH (18 decimals)
-0xDB6BDf95fDb367F2c983167C0f1Ec4a8913694a5
-
-DAI (18 decimals)
-0xE77A0C6E103fB655AAA2F31b892deF9Cf0909158
-
-USDC (6 decimals)
-0x5d268aEd192e6C55a950ccd65Fe209A13F0e338f
-
-Orderbook filler is now running.
-```
+The integration tests use the Root Hooks provided by `src/util/mochaHooks.ts`, which spawn an anvil process with Mangrove deployed and add information to the `server` and `accounts` properties of the Mocha `Context`.
 
 ## Build for Node.js & Web Browser
 

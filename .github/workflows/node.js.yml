@@ -151,100 +151,6 @@ jobs:
         SLACK_WEBHOOK_URL: ${{ secrets.ACTION_MONITORING_SLACK }}
   # ==== End job: commonlib-js ====
 
-  # ==== Job: Build and test faucet ====
-  faucet:
-    needs: [security-guard]
-
-    runs-on: ubuntu-latest
-
-    env:
-      working-directory: packages/faucet
-
-    defaults:
-      run:
-        working-directory: ${{env.working-directory}}
-
-    strategy:
-      matrix:
-        node-version: [14.x]
-
-    steps:
-
-    # == Git checkout ==
-    - name: Checkout
-      uses: actions/checkout@v3
-      # Workaround for https://github.com/npm/cli/issues/2610
-      with:
-        persist-credentials: false
-        ref: ${{ env.GIT_REF_TO_TEST }}
-        submodules: recursive
-
-    - name: Reconfigure git to use HTTP authentication
-      # Workaround for https://github.com/npm/cli/issues/2610    
-      run: >
-        git config --global url."https://github.com/".insteadOf
-        ssh://git@github.com/
-
-    # == yarn setup ==
-    - name: Yarn setup (caching yarn dependencies)
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'yarn'
-        
-    - run: yarn install --immutable
-      working-directory: . # Yarn must run in root to ensure monorepo setup
-
-    # == foundry setup ==
-    - name: Install Foundry
-      uses: foundry-rs/foundry-toolchain@v1
-      with:
-        version: nightly
-        
-    # == build ==
-    - name: Solidity Compile
-      run: yarn run build-this-package
-
-    - name: Save status of build
-      # So we can fail-fast and drop the X Test Report steps, if build fails
-      # A tiny bit hacky, but it's simple and works
-      run: echo "faucet_built=true" >> $GITHUB_ENV
-
-    # Run Solidity tests and report
-    - name: Faucet Tests
-      run: yarn run test:solidity
-
-    - name: Faucet Test Report
-      uses: dorny/test-reporter@v1
-      if: ${{ env.faucet_built && (success() || failure()) }}
-      with:
-        name: Faucet Tests                  # Name of the check run which will be created
-        path: ${{env.working-directory}}/solidity-mocha-test-report.json # Path to test results
-        reporter: mocha-json                  # Format of test results
-
-    # save artifacts for later stages
-    - name: Zip output
-      uses: montudor/action-zip@v1
-      with: 
-        args: zip -qq -r faucet-out.zip ${{env.working-directory}}/artifacts ${{env.working-directory}}/dist
-
-    - name: Cache faucet output as artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: faucet-out.zip
-        path: faucet-out.zip
-
-    - name: Report Failure to Slack
-      if: ${{ failure() && fromJSON(env.NOTIFY_SLACK_FOR_THIS_WORKFLOW_RUN) }}
-      uses: ravsamhq/notify-slack-action@v1
-      with:
-        status: ${{ job.status }}
-        message_format: '{emoji} *{workflow}* {status_message} in <{repo_url}|{repo}@{branch}> on <{commit_url}|{commit_sha}> at {job}'
-        footer: '<{run_url}|View Run>'
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.ACTION_MONITORING_SLACK }}
-  # ==== End job faucet ====
-
   # ==== Job: Build and test Mangrove Core
   mangrove-solidity:
     needs: [security-guard]
@@ -407,108 +313,9 @@ jobs:
         SLACK_WEBHOOK_URL: ${{ secrets.ACTION_MONITORING_SLACK }}
   # ==== End job mangrove-solidity-doc ====
 
-  # ==== Job: Build and test hardhat-utils ====
-  hardhat-utils:
-    needs: [security-guard, mangrove-solidity]
-
-    runs-on: ubuntu-latest
-
-    env:
-      working-directory: packages/hardhat-utils
-
-    defaults:
-      run:
-        working-directory: ${{env.working-directory}}
-
-    strategy:
-      matrix:
-        node-version: [14.x]
-
-    steps:
-
-    # == Git checkout ==
-    - name: Checkout
-      uses: actions/checkout@v3
-      # Workaround for https://github.com/npm/cli/issues/2610
-      with:
-        persist-credentials: false
-        ref: ${{ env.GIT_REF_TO_TEST }}
-        submodules: recursive
-
-    - name: Reconfigure git to use HTTP authentication
-      # Workaround for https://github.com/npm/cli/issues/2610    
-      run: >
-        git config --global url."https://github.com/".insteadOf
-        ssh://git@github.com/
-
-    # == yarn setup ==
-    - name: Yarn setup (caching yarn dependencies)
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'yarn'
-        
-    - run: yarn install --immutable
-      working-directory: . # Yarn must run in root to ensure monorepo setup
-
-    # == download artefact ==
-    - name: Download cached mangrove-solidity artifact
-      uses: actions/download-artifact@v3
-      with:
-        name: mangrove-solidity-out.zip
-
-    - name: Unzip artifact
-      uses: montudor/action-zip@v1
-      with:
-        args: unzip -qq mangrove-solidity-out.zip
-
-    # build
-    - name: hardhat-utils - Build
-      run: yarn run build-this-package
-
-    - name: Save status of build
-      run: echo "hardhat_mangrove_built=true" >> $GITHUB_ENV    
-
-    # == run and report tests == 
-    # NOTE: Uncomment the following two steps, when hardhat-utils has tests -->
-    # - name: hardhat-utils - Tests
-    #   run: yarn run test
-
-    # - name: hardhat-utils - Test Report
-    #   uses: dorny/test-reporter@v1
-    #   if: ${{ env.hardhat_mangrove_built && (success() || failure()) }}
-    #   with:
-    #     name: hardhat-utils - Tests                   # Name of the check run which will be created
-    #     path: packages/hardhat-utils/integration-tests-report.json # Path to test results
-    #     reporter: mocha-json                               # Format of test results
-
-    # save artifacts for later stages
-    # NOTE: Uncomment the following two steps, if/when hardhat-utils has build artefacts -->
-    # - name: Zip output
-    #   uses: montudor/action-zip@v1
-    #   with: 
-    #     args: zip -qq -r hardhat-utils-out.zip ${{env.working-directory}}/dist
-
-    # - name: Cache hardhat-utils output as artifact
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: hardhat-utils-out.zip
-    #     path: hardhat-utils-out.zip
-
-    - name: Report Failure to Slack
-      if: ${{ failure() && fromJSON(env.NOTIFY_SLACK_FOR_THIS_WORKFLOW_RUN) }}
-      uses: ravsamhq/notify-slack-action@v1
-      with:
-        status: ${{ job.status }}
-        message_format: '{emoji} *{workflow}* {status_message} in <{repo_url}|{repo}@{branch}> on <{commit_url}|{commit_sha}> at {job}'
-        footer: '<{run_url}|View Run>'
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.ACTION_MONITORING_SLACK }}
-  # ==== End job: hardhat-utils ====
-
   # ==== Job: Build and test mangrove.js ====
   mangrove-js:
-    needs: [security-guard, commonlib-js, mangrove-solidity, hardhat-utils]
+    needs: [security-guard, commonlib-js, mangrove-solidity]
 
     runs-on: ubuntu-latest
 
@@ -576,17 +383,6 @@ jobs:
       uses: montudor/action-zip@v1
       with:
         args: unzip -qq commonlib-out.zip
-
-    # NOTE: Uncomment the following two steps, if/when hardhat-utils has build artefacts -->
-    # - name: Download cached hardhat-utils artifact
-    #   uses: actions/download-artifact@v3
-    #   with:
-    #     name: hardhat-utils-out.zip
-
-    # - name: Unzip hardhat-utils artifact
-    #   uses: montudor/action-zip@v1
-    #   with:
-    #     args: unzip -qq hardhat-utils-out.zip
 
     # == build == 
     - name: Mangrove.js build
@@ -726,7 +522,7 @@ jobs:
 
   # ==== Job: Build and test bot-cleaning ====
   bot-cleaning:
-    needs: [security-guard, commonlib-js, mangrove-solidity, hardhat-utils, mangrove-js]
+    needs: [security-guard, commonlib-js, mangrove-solidity, mangrove-js]
 
     runs-on: ubuntu-latest
 
@@ -785,17 +581,6 @@ jobs:
       with:
         args: unzip -qq mangrove-solidity-out.zip
 
-    # NOTE: Uncomment the following two steps, if/when hardhat-utils has build artefacts -->
-    # - name: Download cached hardhat-utils artifact
-    #   uses: actions/download-artifact@v3
-    #   with:
-    #     name: hardhat-utils-out.zip
-
-    # - name: Unzip hardhat-utils artifact
-    #   uses: montudor/action-zip@v1
-    #   with:
-    #     args: unzip -qq hardhat-utils-out.zip
-
     - name: Download cached mangrove-js artifact
       uses: actions/download-artifact@v3
       with:
@@ -849,7 +634,7 @@ jobs:
 
   # ==== Job: Build and test bot-updategas ====
   bot-updategas:
-    needs: [security-guard, commonlib-js, mangrove-solidity, hardhat-utils, mangrove-js]
+    needs: [security-guard, commonlib-js, mangrove-solidity, mangrove-js]
 
     runs-on: ubuntu-latest
 
@@ -908,17 +693,6 @@ jobs:
       with:
         args: unzip -qq mangrove-solidity-out.zip
 
-    # NOTE: Uncomment the following two steps, if/when hardhat-utils has build artefacts -->
-    # - name: Download cached hardhat-utils artifact
-    #   uses: actions/download-artifact@v3
-    #   with:
-    #     name: hardhat-utils-out.zip
-
-    # - name: Unzip hardhat-utils artifact
-    #   uses: montudor/action-zip@v1
-    #   with:
-    #     args: unzip -qq hardhat-utils-out.zip
-
     - name: Download cached mangrove-js artifact
       uses: actions/download-artifact@v3
       with:
@@ -972,7 +746,7 @@ jobs:
           
   # ==== Job: Build and test bot-maker-noise ====
   bot-maker-noise:
-    needs: [security-guard, commonlib-js, mangrove-solidity, hardhat-utils, mangrove-js]
+    needs: [security-guard, commonlib-js, mangrove-solidity, mangrove-js]
 
     runs-on: ubuntu-latest
 
@@ -1037,17 +811,6 @@ jobs:
       with:
         args: unzip -qq mangrove-solidity-out.zip
 
-    # NOTE: Uncomment the following two steps, if/when hardhat-utils has build artefacts -->
-    # - name: Download cached hardhat-utils artifact
-    #   uses: actions/download-artifact@v3
-    #   with:
-    #     name: hardhat-utils-out.zip
-
-    # - name: Unzip hardhat-utils artifact
-    #   uses: montudor/action-zip@v1
-    #   with:
-    #     args: unzip -qq hardhat-utils-out.zip
-
     - name: Download cached mangrove-js artifact
       uses: actions/download-artifact@v3
       with:
@@ -1101,7 +864,7 @@ jobs:
           
   # ==== Job: Build and test bot-taker-greedy ====
   bot-taker-greedy:
-    needs: [security-guard, commonlib-js, mangrove-solidity, hardhat-utils, mangrove-js]
+    needs: [security-guard, commonlib-js, mangrove-solidity,  mangrove-js]
 
     runs-on: ubuntu-latest
 
@@ -1166,17 +929,6 @@ jobs:
       with:
         args: unzip -qq mangrove-solidity-out.zip
 
-    # NOTE: Uncomment the following two steps, if/when hardhat-utils has build artefacts -->
-    # - name: Download cached hardhat-utils artifact
-    #   uses: actions/download-artifact@v3
-    #   with:
-    #     name: hardhat-utils-out.zip
-
-    # - name: Unzip hardhat-utils artifact
-    #   uses: montudor/action-zip@v1
-    #   with:
-    #     args: unzip -qq hardhat-utils-out.zip
-
     - name: Download cached mangrove-js artifact
       uses: actions/download-artifact@v3
       with:
@@ -1230,7 +982,7 @@ jobs:
 
   # ==== Job: Build and test bot-template ====
   bot-template:
-    needs: [security-guard, commonlib-js, mangrove-solidity, hardhat-utils, mangrove-js]
+    needs: [security-guard, commonlib-js, mangrove-solidity, mangrove-js]
 
     runs-on: ubuntu-latest
 
@@ -1294,17 +1046,6 @@ jobs:
       uses: montudor/action-zip@v1
       with:
         args: unzip -qq mangrove-solidity-out.zip
-
-    # NOTE: Uncomment the following two steps, if/when hardhat-utils has build artefacts -->
-    # - name: Download cached hardhat-utils artifact
-    #   uses: actions/download-artifact@v3
-    #   with:
-    #     name: hardhat-utils-out.zip
-
-    # - name: Unzip hardhat-utils artifact
-    #   uses: montudor/action-zip@v1
-    #   with:
-    #     args: unzip -qq hardhat-utils-out.zip
 
     - name: Download cached mangrove-js artifact
       uses: actions/download-artifact@v3

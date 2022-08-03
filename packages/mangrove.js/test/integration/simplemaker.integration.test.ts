@@ -5,6 +5,7 @@ import { BigNumber } from "ethers";
 
 import assert from "assert";
 import { Mangrove, OfferLogic, LiquidityProvider } from "../../src";
+import { approxEq } from "../util/helpers";
 
 import { Big } from "big.js";
 
@@ -21,14 +22,15 @@ describe("SimpleMaker", () => {
   });
 
   describe("SimpleMaker connectivity", () => {
-    it("deploys and connects", async () => {
+    it("deploys and connects", async function () {
       mgv = await Mangrove.connect({
-        provider: "http://localhost:8546",
+        provider: this.server.url,
+        privateKey: this.accounts.tester.key,
       });
       //shorten polling for faster tests
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      mgv._provider.pollingInterval = 250;
+      mgv._provider.pollingInterval = 10;
       const mkr_address = await OfferLogic.deploy(mgv, "SimpleMaker");
       const logic = mgv.offerLogic(mkr_address, false);
       const lp = await logic.liquidityProvider({
@@ -47,13 +49,14 @@ describe("SimpleMaker", () => {
     beforeEach(async function () {
       //set mgv object
       mgv = await Mangrove.connect({
-        provider: "http://localhost:8546",
+        provider: this.server.url,
+        privateKey: this.accounts.tester.key,
       });
 
       //shorten polling for faster tests
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      mgv._provider.pollingInterval = 250;
+      mgv._provider.pollingInterval = 10;
 
       const mkr_address = await OfferLogic.deploy(mgv, "SimpleMaker");
       const logic = mgv.offerLogic(mkr_address, false);
@@ -160,7 +163,9 @@ describe("SimpleMaker", () => {
           18
         );
 
-        assert.strictEqual(diff.toNumber(), 10, "wrong balance");
+        /* FIXME the effectiveGasPrice returned by anvil is incorrect, so for now we do an approx estimate. */
+        const diff2 = (await getBal()).sub(oldBal).add(txcost);
+        assert(approxEq(diff2, mgv.toUnits(10, 18), "0.001"), "wrong balance");
       });
 
       it("pushes a new offer", async () => {

@@ -230,6 +230,14 @@ class Market {
     this.#bidsSemibook.disconnect();
   }
 
+  /* wait until all currently pending semibook operations have been completed -- not as good as explicitly waiting for a specific tx to be processed by mangrove.js, but works as a temporary solution */
+  async awaitCurrentProcessing(): Promise<void> {
+    await Promise.all([
+      this.#asksSemibook.awaitCurrentProcessing(),
+      this.#bidsSemibook.awaitCurrentProcessing(),
+    ]);
+  }
+
   /**
    * Initialize a new `params.base`:`params.quote` market.
    *

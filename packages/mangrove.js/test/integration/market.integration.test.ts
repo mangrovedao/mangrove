@@ -3,11 +3,11 @@ import { describe, beforeEach, afterEach, it } from "mocha";
 import { expect } from "chai";
 
 import { toWei } from "../util/helpers";
-import * as mgvTestUtil from "../util/mgvIntegrationTestUtil";
+import * as mgvTestUtil from "../../src/util/mgvIntegrationTestUtil";
 const waitForTransaction = mgvTestUtil.waitForTransaction;
 
 import assert from "assert";
-import { Mangrove, Market } from "../..";
+import { Mangrove, Market } from "../../src";
 import * as helpers from "../util/helpers";
 
 import { Big } from "big.js";
@@ -23,15 +23,17 @@ describe("Market integration tests suite", () => {
   let mgv: Mangrove;
 
   beforeEach(async function () {
-    //set mgv object
     mgv = await Mangrove.connect({
-      provider: "http://localhost:8546",
+      provider: this.server.url,
+      privateKey: this.accounts.tester.key,
     });
+
+    mgvTestUtil.setConfig(mgv, this.accounts);
 
     //shorten polling for faster tests
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    mgv._provider.pollingInterval = 250;
+    mgv._provider.pollingInterval = 10;
     await mgv.contract["fund()"]({ value: toWei(10) });
 
     const tokenA = mgv.token("TokenA");
@@ -45,10 +47,10 @@ describe("Market integration tests suite", () => {
     mgv.disconnect();
   });
 
-  describe("Readonly mode", () => {
+  describe("Readonly mode", async function () {
     let mgvro: Mangrove;
 
-    beforeEach(async () => {
+    beforeEach(async function () {
       mgvro = await Mangrove.connect({
         provider: "http://localhost:8546",
         forceReadOnly: true,
@@ -56,7 +58,7 @@ describe("Market integration tests suite", () => {
       //shorten polling for faster tests
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      mgvro._provider.pollingInterval = 250;
+      mgvro._provider.pollingInterval = 10;
     });
     afterEach(async () => {
       mgvro.disconnect();
@@ -167,7 +169,6 @@ describe("Market integration tests suite", () => {
     assert.deepStrictEqual(latestBids, [offer2], "bids semibook not correct");
 
     market.sell({ wants: "1", gives: "1.3" });
-
     const offerFail = await queue.get();
     assert.strictEqual(offerFail.type, "OfferSuccess");
     assert.strictEqual(offerFail.ba, "bids");
@@ -186,7 +187,9 @@ describe("Market integration tests suite", () => {
     market.subscribe(cb);
 
     // post a failing offer from SimpleTestMaker
-    const maker = await mgvTestUtil.getAccount(mgvTestUtil.AccountName.Maker);
+    const maker = await mgvTestUtil.getAccount(
+      mgvTestUtil.AccountName.Deployer
+    );
     await mgvTestUtil.postNewFailingOffer(market, "asks", maker);
 
     // make sure the offer tx has been gen'ed and the OfferWrite has been logged
@@ -229,8 +232,8 @@ describe("Market integration tests suite", () => {
 
   it("gets config", async function () {
     const mgvAsAdmin = await Mangrove.connect({
-      provider: "http://localhost:8546",
-      signerIndex: 1, // deployer index in hardhat.config
+      provider: this.server.url,
+      privateKey: this.accounts.deployer.key,
     });
 
     const fee = 13;
